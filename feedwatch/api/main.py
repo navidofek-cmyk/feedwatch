@@ -7,7 +7,7 @@ from fastapi.responses import FileResponse, RedirectResponse
 
 from feedwatch.db import init_db
 from feedwatch.services.scheduler import get_scheduler
-from feedwatch.api.routes import feeds_router, articles_router, actions_router
+from feedwatch.api.routes import feeds_router, articles_router, actions_router, chat_router
 
 WEB_DIR = Path(__file__).parent.parent / "web"
 
@@ -31,6 +31,7 @@ app = FastAPI(
 app.include_router(feeds_router)
 app.include_router(articles_router)
 app.include_router(actions_router)
+app.include_router(chat_router)
 
 
 @app.get("/health")
