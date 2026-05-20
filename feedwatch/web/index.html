@@ -136,6 +136,12 @@
                 animation:pulse 1s ease infinite}
     .tool-done{background:rgba(80,210,178,.1);border-color:rgba(80,210,178,.25);color:var(--accent2);animation:none}
 
+    .no-key-banner{background:rgba(249,200,79,.08);border:1px solid rgba(249,200,79,.25);
+                   border-radius:var(--r);padding:1rem 1.25rem;margin:1rem;font-size:.85rem;line-height:1.7}
+    .no-key-banner strong{color:var(--yellow)}
+    .no-key-banner code{background:rgba(255,255,255,.06);padding:.1em .4em;border-radius:4px;
+                        font-family:var(--mono);font-size:.82em}
+
     .cursor{display:inline-block;width:2px;height:1em;background:var(--accent);
             vertical-align:text-bottom;animation:blink .8s step-end infinite;margin-left:1px}
     @keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
@@ -547,6 +553,11 @@ async function sendMessage() {
               b.textContent = `✓ ${b.textContent.replace('🔍 ','').replace('…','')}`;
             });
           }
+          else if (evtName === 'no_key') {
+            cursor.remove();
+            assistantEl.remove();
+            showNoKeyBanner();
+          }
           else if (evtName === 'error') {
             fullText = data.text;
             cursor.remove();
@@ -585,6 +596,27 @@ function appendMessage(role, text) {
 function scrollChat() {
   const el = document.getElementById('chatMessages');
   el.scrollTop = el.scrollHeight;
+}
+
+function showNoKeyBanner() {
+  if (document.getElementById('noKeyBanner')) return;
+  const wrap = document.getElementById('chatMessages');
+  const div = document.createElement('div');
+  div.id = 'noKeyBanner';
+  div.className = 'no-key-banner';
+  div.innerHTML = `
+    <strong>⚠️ API klíč není nastaven</strong><br>
+    Chat AI vyžaduje Anthropic API klíč. Zbytek aplikace (News tab, search, refresh) funguje bez něj.<br><br>
+    <strong>Jak zprovoznit:</strong><br>
+    1. Vytvoř soubor <code>.env</code> v kořeni projektu<br>
+    2. Přidej řádek: <code>ANTHROPIC_API_KEY=sk-ant-...</code><br>
+    3. Restartuj server: <code>uv run feedwatch serve</code><br><br>
+    API klíč získáš na <a href="https://console.anthropic.com" target="_blank" style="color:var(--accent2)">console.anthropic.com</a>
+  `;
+  wrap.appendChild(div);
+  scrollChat();
+  isStreaming = false;
+  document.getElementById('sendBtn').disabled = false;
 }
 
 // ── MARKDOWN (minimal) ────────────────────────────────────────────────────────

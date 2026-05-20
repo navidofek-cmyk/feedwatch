@@ -148,7 +148,7 @@ async def _run_tool(name: str, inputs: dict, db: AsyncSession) -> str:
 
 async def _stream_chat(message: str, history: list[dict], db: AsyncSession):
     if not settings.anthropic_api_key:
-        yield _sse("error", {"text": "ANTHROPIC_API_KEY not set in .env"})
+        yield _sse("no_key", {})
         return
 
     client = anthropic.AsyncAnthropic(api_key=settings.anthropic_api_key)

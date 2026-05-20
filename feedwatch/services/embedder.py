@@ -82,7 +82,7 @@ def semantic_search(query: str, n_results: int = 10) -> list[dict]:
                 "id": doc_id,
                 "text": results["documents"][0][i],
                 "metadata": results["metadatas"][0][i],
-                "score": 1 - results["distances"][0][i],
+                "score": max(0.0, 1 - results["distances"][0][i] / 2),
             }
         )
     return output
