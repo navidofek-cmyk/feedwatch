@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>feedwatch — RSS aggregator with AI agents</title>
+  <meta name="description" content="Async Python RSS aggregator with semantic vector search, sentiment analysis, and Claude AI agents."/>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet"/>
+  <style>
+    :root{
+      --bg:#0d0f16;--s1:#13151f;--s2:#1c1f2e;--s3:#242840;
+      --border:#2a2e44;--accent:#7c6dfa;--accent2:#50d2b2;--accent3:#f7735e;
+      --text:#e2e5f0;--dim:#7a80a0;
+      --green:#50d2b2;--red:#f7735e;--yellow:#f9c84f;
+      --mono:"JetBrains Mono",monospace;--r:12px;
+    }
+    *{box-sizing:border-box;margin:0;padding:0}
+    html{scroll-behavior:smooth}
+    body{background:var(--bg);color:var(--text);font-family:"Inter",sans-serif;font-size:16px;line-height:1.7}
+    a{color:var(--accent);text-decoration:none}
+    a:hover{text-decoration:underline}
+    code{font-family:var(--mono);background:var(--s2);padding:.15em .4em;border-radius:5px;font-size:.88em}
+
+    /* NAV */
+    nav{position:sticky;top:0;z-index:100;background:rgba(13,15,22,.9);backdrop-filter:blur(16px);
+        border-bottom:1px solid var(--border);display:flex;align-items:center;
+        justify-content:space-between;padding:.8rem 2rem}
+    .nav-logo{font-size:1.1rem;font-weight:900;color:var(--accent);letter-spacing:-.5px}
+    .nav-logo span{color:var(--accent2)}
+    .nav-links{display:flex;gap:1.75rem;list-style:none}
+    .nav-links a{color:var(--dim);font-size:.88rem;transition:color .2s}
+    .nav-links a:hover{color:var(--text);text-decoration:none}
+    .nav-btn{background:var(--accent);color:#fff;padding:.4rem 1.1rem;border-radius:8px;
+             font-size:.85rem;font-weight:700;transition:background .2s}
+    .nav-btn:hover{background:#6a5de8;text-decoration:none}
+
+    /* SECTIONS */
+    section{padding:5rem 2rem}
+    .container{max-width:1080px;margin:0 auto}
+    .label{font-size:.72rem;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;
+           color:var(--accent);margin-bottom:.6rem}
+    h2{font-size:clamp(1.8rem,4vw,2.6rem);font-weight:900;letter-spacing:-1px;margin-bottom:.9rem}
+    .sub{font-size:1rem;color:var(--dim);max-width:580px;margin-bottom:2.5rem}
+
+    /* HERO */
+    .hero{text-align:center;padding:7rem 2rem 5rem;
+          background:radial-gradient(ellipse 80% 55% at 50% 0%,rgba(124,109,250,.14) 0%,transparent 70%)}
+    .hero-badge{display:inline-block;background:rgba(124,109,250,.15);border:1px solid rgba(124,109,250,.3);
+                color:var(--accent);font-size:.72rem;font-weight:700;letter-spacing:1px;
+                text-transform:uppercase;padding:.3rem 1rem;border-radius:100px;margin-bottom:1.5rem}
+    .hero h1{font-size:clamp(2.8rem,7vw,5rem);font-weight:900;letter-spacing:-2.5px;line-height:1.05;margin-bottom:1.2rem}
+    .hero h1 .g{background:linear-gradient(130deg,var(--accent) 0%,var(--accent2) 100%);
+                -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+    .hero p{font-size:1.1rem;color:var(--dim);max-width:540px;margin:0 auto 2.5rem}
+    .hero-btns{display:flex;gap:1rem;justify-content:center;flex-wrap:wrap}
+    .btn{display:inline-flex;align-items:center;gap:.4rem;padding:.7rem 1.6rem;
+         border-radius:var(--r);font-size:.92rem;font-weight:700;cursor:pointer;border:none;transition:all .18s}
+    .btn-p{background:var(--accent);color:#fff}
+    .btn-p:hover{background:#6a5de8;transform:translateY(-2px);box-shadow:0 8px 24px rgba(124,109,250,.3);text-decoration:none}
+    .btn-o{background:transparent;color:var(--text);border:1px solid var(--border)}
+    .btn-o:hover{border-color:var(--accent);color:var(--accent);transform:translateY(-2px);text-decoration:none}
+
+    /* TERMINAL */
+    .terminal-wrap{max-width:780px;margin:3.5rem auto 0;padding:0 1rem}
+    .terminal{background:#0a0b11;border:1px solid var(--border);border-radius:var(--r);overflow:hidden;
+              box-shadow:0 24px 64px rgba(0,0,0,.6)}
+    .t-bar{background:var(--s2);padding:.65rem 1rem;display:flex;align-items:center;gap:.45rem}
+    .dot{width:11px;height:11px;border-radius:50%}
+    .t-body{padding:1.4rem 1.5rem;font-family:var(--mono);font-size:.82rem;line-height:1.9;overflow-x:auto}
+    .tp{color:var(--accent2)} .tc{color:var(--text)} .td{color:var(--dim)}
+    .tg{color:var(--green)} .tr{color:var(--red)} .ty{color:var(--yellow)} .ta{color:var(--accent)}
+
+    /* PIPELINE */
+    .pipeline{display:flex;align-items:stretch;gap:0;margin:2rem 0;overflow-x:auto;padding-bottom:.5rem}
+    .pipe-step{flex:1;min-width:130px;background:var(--s2);border:1px solid var(--border);
+               padding:1.25rem 1rem;text-align:center;position:relative}
+    .pipe-step:not(:last-child)::after{content:"→";position:absolute;right:-.85rem;top:50%;
+        transform:translateY(-50%);color:var(--accent);font-size:1.2rem;z-index:1;background:var(--bg);padding:0 2px}
+    .pipe-step:first-child{border-radius:var(--r) 0 0 var(--r)}
+    .pipe-step:last-child{border-radius:0 var(--r) var(--r) 0}
+    .pipe-icon{font-size:1.6rem;margin-bottom:.4rem}
+    .pipe-name{font-weight:700;font-size:.82rem;margin-bottom:.2rem}
+    .pipe-tech{font-size:.72rem;color:var(--dim);font-family:var(--mono)}
+
+    /* FEATURE GRID */
+    .fg{display:grid;grid-template-columns:repeat(auto-fit,minmax(270px,1fr));gap:1.25rem}
+    .fc{background:var(--s1);border:1px solid var(--border);border-radius:var(--r);
+        padding:1.5rem;transition:border-color .2s,transform .2s}
+    .fc:hover{border-color:var(--accent);transform:translateY(-3px)}
+    .fc-icon{font-size:1.8rem;margin-bottom:.75rem}
+    .fc h3{font-size:.95rem;font-weight:700;margin-bottom:.4rem}
+    .fc p{font-size:.85rem;color:var(--dim);line-height:1.6}
+    .tags{margin-top:.75rem;display:flex;flex-wrap:wrap;gap:.35rem}
+    .tag{font-size:.68rem;font-weight:700;font-family:var(--mono);padding:.15rem .55rem;border-radius:5px}
+    .tp1{background:rgba(124,109,250,.18);color:var(--accent)}
+    .tp2{background:rgba(80,210,178,.18);color:var(--accent2)}
+    .tp3{background:rgba(247,115,94,.18);color:var(--accent3)}
+
+    /* THEORY CARDS */
+    .theory-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:1.5rem}
+    .theory-card{background:var(--s1);border:1px solid var(--border);border-radius:var(--r);padding:1.75rem}
+    .theory-card h3{font-size:1rem;font-weight:800;margin-bottom:.75rem;display:flex;align-items:center;gap:.5rem}
+    .theory-card p{font-size:.88rem;color:var(--dim);margin-bottom:1rem}
+    .theory-card .example{background:var(--s2);border-left:3px solid var(--accent);
+        border-radius:0 8px 8px 0;padding:.75rem 1rem;font-family:var(--mono);
+        font-size:.78rem;line-height:1.8;color:var(--text)}
+    .theory-card .example .c{color:var(--dim)}
+
+    /* CODE BLOCK */
+    .codeblock{background:#0a0b11;border:1px solid var(--border);border-radius:var(--r);overflow:hidden;margin:1.5rem 0}
+    .cb-header{background:var(--s2);padding:.55rem 1.1rem;font-family:var(--mono);font-size:.75rem;color:var(--dim);
+               display:flex;align-items:center;justify-content:space-between}
+    .cb-body{padding:1.25rem 1.4rem;font-family:var(--mono);font-size:.82rem;line-height:1.9;overflow-x:auto;white-space:pre}
+    .kw{color:var(--accent)} .fn{color:var(--accent2)} .st{color:var(--yellow)} .cm{color:var(--dim);font-style:italic}
+    .nb{color:var(--accent3)}
+
+    /* STEPS */
+    .steps{display:flex;flex-direction:column;gap:1.5rem}
+    .step{display:flex;gap:1.5rem;align-items:flex-start}
+    .step-num{flex-shrink:0;width:44px;height:44px;border-radius:50%;
+              background:linear-gradient(135deg,var(--accent),var(--accent2));
+              display:flex;align-items:center;justify-content:center;font-weight:900;font-size:1rem}
+    .step-body h3{font-size:.95rem;font-weight:700;margin-bottom:.3rem}
+    .step-body p{font-size:.88rem;color:var(--dim)}
+
+    /* CMD TABLE */
+    .cmd-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:.75rem}
+    .cmd{background:#0a0b11;border:1px solid var(--border);border-radius:var(--r);padding:1rem 1.25rem}
+    .cmd-line{font-family:var(--mono);font-size:.82rem;color:var(--accent2);margin-bottom:.35rem}
+    .cmd-line strong{color:var(--accent)}
+    .cmd-desc{font-size:.82rem;color:var(--dim)}
+
+    /* STACK */
+    .stack-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1rem}
+    .stack-item{background:var(--s1);border:1px solid var(--border);border-radius:var(--r);
+                padding:1rem 1.25rem;display:flex;align-items:center;gap:.75rem}
+    .stack-item .si-name{font-weight:700;font-size:.88rem}
+    .stack-item .si-desc{font-size:.78rem;color:var(--dim)}
+
+    /* FOOTER */
+    footer{border-top:1px solid var(--border);padding:3rem 2rem;text-align:center;color:var(--dim);font-size:.85rem}
+
+    section:nth-child(even){background:var(--s1)}
+    @media(max-width:600px){nav{padding:.7rem 1rem}.nav-links{display:none}section{padding:3.5rem 1rem}.pipeline{gap:.5rem}}
+  </style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-logo">feed<span>watch</span></div>
+  <ul class="nav-links">
+    <li><a href="#how-it-works">How it works</a></li>
+    <li><a href="#theory">Theory</a></li>
+    <li><a href="#features">Features</a></li>
+    <li><a href="#install">Install</a></li>
+    <li><a href="#commands">Commands</a></li>
+  </ul>
+  <a href="https://github.com/navidofek-cmyk/feedwatch" class="btn nav-btn" target="_blank">GitHub ↗</a>
+</nav>
+
+<!-- HERO -->
+<header class="hero">
+  <div class="hero-badge">Python · FastAPI · Claude AI · Portfolio project</div>
+  <h1>RSS feeds.<br><span class="g">Finally smart.</span></h1>
+  <p>feedwatch fetches your RSS feeds asynchronously, analyzes sentiment, builds a semantic vector index, and lets an AI agent answer questions about your news.</p>
+  <div class="hero-btns">
+    <a href="#install" class="btn btn-p">⚡ Get started</a>
+    <a href="https://github.com/navidofek-cmyk/feedwatch" class="btn btn-o" target="_blank">View on GitHub</a>
+  </div>
+
+  <div class="terminal-wrap">
+    <div class="terminal">
+      <div class="t-bar">
+        <div class="dot" style="background:#ff5f57"></div>
+        <div class="dot" style="background:#febc2e"></div>
+        <div class="dot" style="background:#28c840"></div>
+      </div>
+      <div class="t-body">
+        <div><span class="tp">❯ </span><span class="tc">feedwatch add https://hnrss.org/frontpage --name "Hacker News"</span></div>
+        <div class="tg">Added: <strong>Hacker News</strong> (tech)</div>
+        <br>
+        <div><span class="tp">❯ </span><span class="tc">feedwatch refresh</span></div>
+        <div class="tg">╭─ Refresh complete ─────────────────╮</div>
+        <div class="tg">│ New articles:   <span class="ta">42</span>                 │</div>
+        <div class="tg">│ Analyzed:       <span class="ta">42</span>  (sentiment)    │</div>
+        <div class="tg">│ Embedded:       <span class="ta">42</span>  (vectors)      │</div>
+        <div class="tg">│ Summarized:     <span class="ta">20</span>  (Claude AI)    │</div>
+        <div class="tg">╰────────────────────────────────────╯</div>
+        <br>
+        <div><span class="tp">❯ </span><span class="tc">feedwatch ask "What are the biggest AI stories today?"</span></div>
+        <div class="td">⠹ Thinking… (searching your feeds)</div>
+        <br>
+        <div class="ta">╭─ AI Answer ─────────────────────────────────────────────╮</div>
+        <div>│ Based on your feeds, the top AI stories are:            │</div>
+        <div>│                                                         │</div>
+        <div>│ 1. <span class="tg">OpenAI GPT-5 launch</span> (+0.82 sentiment)            │</div>
+        <div>│    → hnrss.org/item?id=48201234                         │</div>
+        <div>│                                                         │</div>
+        <div>│ 2. <span class="ty">Anthropic safety research</span> (+0.61)               │</div>
+        <div>│    → hnrss.org/item?id=48201890                         │</div>
+        <div class="ta">╰─────────────────────────────────────────────────────────╯</div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<!-- HOW IT WORKS -->
+<section id="how-it-works">
+  <div class="container">
+    <div class="label">Under the hood</div>
+    <h2>From RSS to AI answer — the full pipeline.</h2>
+    <p class="sub">Every time you run <code>feedwatch refresh</code>, five stages transform raw XML into searchable, queryable knowledge.</p>
+
+    <div class="pipeline">
+      <div class="pipe-step">
+        <div class="pipe-icon">📡</div>
+        <div class="pipe-name">Fetch</div>
+        <div class="pipe-tech">httpx async</div>
+      </div>
+      <div class="pipe-step">
+        <div class="pipe-icon">🗄️</div>
+        <div class="pipe-name">Store</div>
+        <div class="pipe-tech">SQLite ORM</div>
+      </div>
+      <div class="pipe-step">
+        <div class="pipe-icon">😊</div>
+        <div class="pipe-name">Sentiment</div>
+        <div class="pipe-tech">VADER</div>
+      </div>
+      <div class="pipe-step">
+        <div class="pipe-icon">🧠</div>
+        <div class="pipe-name">Embed</div>
+        <div class="pipe-tech">MiniLM vectors</div>
+      </div>
+      <div class="pipe-step">
+        <div class="pipe-icon">✍️</div>
+        <div class="pipe-name">Summarize</div>
+        <div class="pipe-tech">Claude API</div>
+      </div>
+    </div>
+
+    <div class="steps" style="margin-top:3rem">
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-body">
+          <h3>Fetch — async HTTP</h3>
+          <p>All active feeds are fetched <strong>concurrently</strong> using <code>httpx.AsyncClient</code> and <code>asyncio.gather()</code>. 50 feeds take the same time as 1. New articles are saved to SQLite; duplicates are ignored by GUID.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-body">
+          <h3>Sentiment — VADER scoring</h3>
+          <p>Each article's title + description is scored using VADER — a rule-based model optimized for short social/news text. Returns a compound score from <strong>−1.0</strong> (very negative) to <strong>+1.0</strong> (very positive). No API, runs locally in milliseconds.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-body">
+          <h3>Embed — semantic vectors</h3>
+          <p>The text of each article is converted to a <strong>384-dimensional vector</strong> by <code>all-MiniLM-L6-v2</code> (sentence-transformers). These vectors capture <em>meaning</em>, not just words — so "AI funding round" and "startup raises capital for machine learning" land close together in vector space. Stored in ChromaDB.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">4</div>
+        <div class="step-body">
+          <h3>Summarize — Claude agent</h3>
+          <p>Each new article is sent to Claude with a system prompt: <em>"Summarize in 1–2 sentences."</em> The result is stored back in SQLite. Batched, async, gracefully skipped if no API key is set.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">5</div>
+        <div class="step-body">
+          <h3>Q&A agent — tool use</h3>
+          <p>When you ask a question, Claude doesn't see all articles at once. Instead it receives a list of <strong>tools</strong> (<code>semantic_search</code>, <code>get_recent_articles</code>, <code>get_feed_stats</code>) and <em>decides which ones to call</em>. It runs multiple tool calls, receives results, and synthesizes a final answer with cited sources.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- THEORY -->
+<section id="theory">
+  <div class="container">
+    <div class="label">Theory explained simply</div>
+    <h2>What's actually happening inside.</h2>
+    <p class="sub">Three concepts power feedwatch. Here's what they mean in plain English — and what the code actually does.</p>
+
+    <div class="theory-grid">
+
+      <div class="theory-card">
+        <h3>🧮 Vector embeddings</h3>
+        <p>An embedding is a list of numbers that represents the <em>meaning</em> of a text. Similar texts produce similar numbers. The model learned this from billions of sentences.</p>
+        <p>feedwatch converts every article to a 384-number vector and stores it in ChromaDB. When you search, your query is also converted to a vector — and we find the closest articles using cosine distance.</p>
+        <div class="example"><span class="c"># "Python performance" becomes:</span>
+[0.12, -0.34, 0.87, 0.02, ...]  <span class="c"># 384 numbers</span>
+
+<span class="c"># "fast Python code" → similar vector</span>
+[0.11, -0.31, 0.89, 0.04, ...]  <span class="c"># close = relevant</span>
+
+<span class="c"># distance between them: 0.03 → TOP RESULT</span></div>
+      </div>
+
+      <div class="theory-card">
+        <h3>😊 Sentiment analysis</h3>
+        <p>VADER (Valence Aware Dictionary and sEntiment Reasoner) uses a hand-crafted dictionary of words with emotional scores, plus rules for negation, punctuation, and capitalization.</p>
+        <p>It returns a compound score: positive words push it up, negative pull it down. Fast, offline, no model download needed.</p>
+        <div class="example"><span class="c"># "Amazing breakthrough in AI!"</span>
+compound = +0.82  <span class="c">→ positive</span>
+
+<span class="c"># "Critical security flaw found"</span>
+compound = -0.61  <span class="c">→ negative</span>
+
+<span class="c"># "Meeting scheduled for Tuesday"</span>
+compound = +0.04  <span class="c">→ neutral</span></div>
+      </div>
+
+      <div class="theory-card">
+        <h3>🤖 AI agent with tool use</h3>
+        <p>Tool use (function calling) lets Claude decide <em>what to do</em> instead of just generating text. You define tools as JSON schemas; Claude picks which ones to call and with what arguments.</p>
+        <p>feedwatch's Q&A agent has 4 tools. Claude reasons about which ones it needs, calls them against your local database, and builds the answer from real data.</p>
+        <div class="example"><span class="c"># You ask: "Any positive AI news?"</span>
+
+<span class="c"># Claude calls:</span>
+semantic_search(<span class="c">"AI news"</span>, n=8)
+get_articles_by_sentiment(<span class="c">"positive"</span>)
+
+<span class="c"># Gets results → writes answer</span>
+<span class="c"># with cited article URLs</span></div>
+      </div>
+
+      <div class="theory-card">
+        <h3>⚡ Async Python</h3>
+        <p><code>asyncio</code> lets one thread handle many tasks at once by switching between them while waiting for I/O (network, disk). Perfect for fetching many feeds simultaneously.</p>
+        <p>feedwatch uses <code>asyncio.gather()</code> to fetch all feeds in parallel — 50 feeds in the time of 1. The FastAPI server and SQLAlchemy database are also fully async.</p>
+        <div class="example"><span class="c"># Sequential (slow):</span>
+for feed in feeds:
+    await fetch(feed)  <span class="c"># 50 × 1s = 50s</span>
+
+<span class="c"># Async parallel (fast):</span>
+await asyncio.gather(
+    *[fetch(f) for f in feeds]
+)  <span class="c"># all at once = ~1s</span></div>
+      </div>
+
+      <div class="theory-card">
+        <h3>🗄️ ORM — object-relational mapping</h3>
+        <p>SQLAlchemy ORM maps Python classes to database tables. You work with <code>Article</code> objects instead of writing raw SQL. Relationships, queries, and migrations all in Python.</p>
+        <div class="example"><span class="c"># Instead of raw SQL:</span>
+<span class="c"># SELECT * FROM articles WHERE ...</span>
+
+<span class="c"># You write Python:</span>
+result = await db.execute(
+    select(Article)
+    .where(Article.sentiment_label
+           == <span class="c">"positive"</span>)
+    .order_by(Article.fetched_at)
+)</div>
+      </div>
+
+      <div class="theory-card">
+        <h3>🏗️ REST API</h3>
+        <p>REST (Representational State Transfer) is a convention for web APIs: use HTTP verbs (<code>GET</code>, <code>POST</code>, <code>DELETE</code>) on resource URLs. FastAPI generates OpenAPI docs automatically from Python type hints.</p>
+        <div class="example"><span class="c"># GET  /feeds/      → list feeds</span>
+<span class="c"># POST /feeds/      → add feed</span>
+<span class="c"># DELETE /feeds/1   → remove feed</span>
+<span class="c"># GET  /articles/   → list articles</span>
+<span class="c"># POST /refresh     → run pipeline</span>
+<span class="c"># POST /ask         → AI agent</span></div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- FEATURES -->
+<section id="features">
+  <div class="container">
+    <div class="label">Features</div>
+    <h2>Everything in one project.</h2>
+    <p class="sub">feedwatch demonstrates the full modern Python stack — from async I/O to AI agents.</p>
+    <div class="fg">
+      <div class="fc"><div class="fc-icon">⚡</div><h3>Async fetching</h3><p>All feeds fetched concurrently. <code>asyncio.gather()</code> runs them all in parallel — no waiting.</p><div class="tags"><span class="tag tp1">asyncio</span><span class="tag tp1">httpx</span></div></div>
+      <div class="fc"><div class="fc-icon">🧠</div><h3>Semantic search</h3><p>Find articles by meaning, not keywords. Powered by local sentence embeddings — no API key needed.</p><div class="tags"><span class="tag tp2">ChromaDB</span><span class="tag tp2">MiniLM</span></div></div>
+      <div class="fc"><div class="fc-icon">😊</div><h3>Sentiment analysis</h3><p>Every article gets a score from −1 to +1. Filter your feed by mood.</p><div class="tags"><span class="tag tp3">VADER</span></div></div>
+      <div class="fc"><div class="fc-icon">🤖</div><h3>AI Q&A agent</h3><p>Claude with tool use. Ask questions, get answers with cited sources from your local database.</p><div class="tags"><span class="tag tp1">Claude API</span><span class="tag tp1">tool use</span></div></div>
+      <div class="fc"><div class="fc-icon">📝</div><h3>Auto summaries</h3><p>Claude summarizes every new article in 1–2 sentences automatically on refresh.</p><div class="tags"><span class="tag tp1">Anthropic SDK</span></div></div>
+      <div class="fc"><div class="fc-icon">🌐</div><h3>REST API</h3><p>Full FastAPI backend. Swagger UI at <code>/docs</code>. All features accessible over HTTP.</p><div class="tags"><span class="tag tp2">FastAPI</span><span class="tag tp2">Pydantic</span></div></div>
+      <div class="fc"><div class="fc-icon">💎</div><h3>Web UI</h3><p>Dark dashboard — article cards, sentiment badges, live search, Ask AI panel. Pure HTML/JS, no build step.</p><div class="tags"><span class="tag tp3">Vanilla JS</span></div></div>
+      <div class="fc"><div class="fc-icon">🗄️</div><h3>Local database</h3><p>Everything in SQLite via async SQLAlchemy ORM. Your data stays on your machine.</p><div class="tags"><span class="tag tp2">SQLAlchemy</span><span class="tag tp2">aiosqlite</span></div></div>
+      <div class="fc"><div class="fc-icon">⏰</div><h3>Auto scheduler</h3><p>APScheduler runs the full pipeline in the background every hour while the server is running.</p><div class="tags"><span class="tag tp3">APScheduler</span></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- INSTALL -->
+<section id="install">
+  <div class="container">
+    <div class="label">Get started</div>
+    <h2>Up and running in 3 minutes.</h2>
+    <p class="sub">Requires Python 3.11+ and <a href="https://docs.astral.sh/uv/" target="_blank">uv</a> — the fast Python package manager.</p>
+
+    <div class="codeblock">
+      <div class="cb-header"><span>bash</span></div>
+      <div class="cb-body"><span class="cm"># 1. clone</span>
+git clone https://github.com/navidofek-cmyk/feedwatch
+<span class="kw">cd</span> feedwatch
+
+<span class="cm"># 2. install everything (creates .venv automatically)</span>
+uv sync
+
+<span class="cm"># 3. configure — add your Anthropic API key</span>
+cp .env.example .env
+
+<span class="cm"># 4. add your first feed</span>
+uv run feedwatch add https://hnrss.org/frontpage --name <span class="st">"Hacker News"</span>
+uv run feedwatch add https://feeds.arstechnica.com/arstechnica/index --name <span class="st">"Ars Technica"</span>
+
+<span class="cm"># 5. fetch, analyze, embed, summarize</span>
+uv run feedwatch refresh
+
+<span class="cm"># 6. ask</span>
+uv run feedwatch ask <span class="st">"What happened in AI today?"</span>
+
+<span class="cm"># 7. open the web UI</span>
+uv run feedwatch serve   <span class="cm"># → http://localhost:8000</span></div>
+    </div>
+
+    <p style="color:var(--dim);font-size:.88rem;margin-top:1rem">
+      The <code>ANTHROPIC_API_KEY</code> in <code>.env</code> is only needed for AI summaries and the Q&A agent. All other features (fetching, sentiment, semantic search, web UI) work without it.
+    </p>
+  </div>
+</section>
+
+<!-- COMMANDS -->
+<section id="commands">
+  <div class="container">
+    <div class="label">CLI reference</div>
+    <h2>All commands.</h2>
+    <p class="sub">Run <code>feedwatch --help</code> or <code>feedwatch &lt;command&gt; --help</code> for full options.</p>
+    <div class="cmd-grid">
+      <div class="cmd"><div class="cmd-line"><strong>feedwatch add</strong> &lt;url&gt; --name "Name"</div><div class="cmd-desc">Add a new RSS feed to the database.</div></div>
+      <div class="cmd"><div class="cmd-line"><strong>feedwatch remove</strong> &lt;id&gt;</div><div class="cmd-desc">Remove a feed and all its articles.</div></div>
+      <div class="cmd"><div class="cmd-line"><strong>feedwatch feeds</strong></div><div class="cmd-desc">List all feeds with article counts.</div></div>
+      <div class="cmd"><div class="cmd-line"><strong>feedwatch refresh</strong></div><div class="cmd-desc">Full pipeline: fetch → analyze → embed → summarize.</div></div>
+      <div class="cmd"><div class="cmd-line"><strong>feedwatch list</strong> --hours 6 --sentiment positive</div><div class="cmd-desc">Browse articles with filters.</div></div>
+      <div class="cmd"><div class="cmd-line"><strong>feedwatch top</strong> --hours 24 --num 5</div><div class="cmd-desc">Top positive and negative articles.</div></div>
+      <div class="cmd"><div class="cmd-line"><strong>feedwatch search</strong> "query"</div><div class="cmd-desc">Semantic vector search over articles.</div></div>
+      <div class="cmd"><div class="cmd-line"><strong>feedwatch ask</strong> "question"</div><div class="cmd-desc">Ask the Claude AI agent about your feeds.</div></div>
+      <div class="cmd"><div class="cmd-line"><strong>feedwatch demo</strong></div><div class="cmd-desc">Run interactive demo. No API key or network needed.</div></div>
+      <div class="cmd"><div class="cmd-line"><strong>feedwatch serve</strong></div><div class="cmd-desc">Start web UI + REST API at localhost:8000.</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- STACK -->
+<section>
+  <div class="container">
+    <div class="label">Tech stack</div>
+    <h2>Built with.</h2>
+    <div class="stack-grid">
+      <div class="stack-item"><div><div class="si-name">FastAPI</div><div class="si-desc">Async REST API + OpenAPI docs</div></div></div>
+      <div class="stack-item"><div><div class="si-name">SQLAlchemy</div><div class="si-desc">Async ORM + aiosqlite</div></div></div>
+      <div class="stack-item"><div><div class="si-name">httpx + asyncio</div><div class="si-desc">Concurrent async HTTP</div></div></div>
+      <div class="stack-item"><div><div class="si-name">sentence-transformers</div><div class="si-desc">Local text embeddings</div></div></div>
+      <div class="stack-item"><div><div class="si-name">ChromaDB</div><div class="si-desc">Vector database</div></div></div>
+      <div class="stack-item"><div><div class="si-name">VADER</div><div class="si-desc">Sentiment analysis</div></div></div>
+      <div class="stack-item"><div><div class="si-name">Anthropic SDK</div><div class="si-desc">Claude AI agents + tool use</div></div></div>
+      <div class="stack-item"><div><div class="si-name">APScheduler</div><div class="si-desc">Background task scheduler</div></div></div>
+      <div class="stack-item"><div><div class="si-name">Typer + Rich</div><div class="si-desc">CLI + terminal output</div></div></div>
+      <div class="stack-item"><div><div class="si-name">Pydantic</div><div class="si-desc">Data validation + settings</div></div></div>
+      <div class="stack-item"><div><div class="si-name">feedparser</div><div class="si-desc">RSS/Atom XML parsing</div></div></div>
+      <div class="stack-item"><div><div class="si-name">uv</div><div class="si-desc">Fast Python package manager</div></div></div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <p><strong>feedwatch</strong> · Python portfolio project ·
+    <a href="https://github.com/navidofek-cmyk/feedwatch" target="_blank">github.com/navidofek-cmyk/feedwatch</a>
+  </p>
+  <p style="margin-top:.5rem;font-size:.78rem">MIT license · Built with Python + Claude</p>
+</footer>
+
+</body>
+</html>
