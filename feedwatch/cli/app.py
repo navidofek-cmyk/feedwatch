@@ -379,6 +379,17 @@ def forums(
 
 
 @app.command()
+def start(
+    host: str = typer.Option("0.0.0.0", "--host", "-H"),
+    port: int = typer.Option(8000, "--port", "-p"),
+):
+    """Start server + interactive REPL. Browser gets live updates via SSE."""
+    import asyncio
+    from feedwatch.cli.repl import run_start
+    asyncio.run(run_start(host, port))
+
+
+@app.command()
 def mcp():
     """Start the MCP server (stdio) for Claude Code / Codex integration."""
     import asyncio

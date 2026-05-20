@@ -661,6 +661,40 @@ function showToast(msg, err=false) {
   setTimeout(()=>t.style.display='none',3500);
 }
 
+// ── LIVE SSE ──────────────────────────────────────────────────────────────────
+function connectLive() {
+  const es = new EventSource('/live');
+
+  es.addEventListener('connected', () => {
+    console.log('[live] connected');
+  });
+
+  es.addEventListener('status', e => {
+    const d = JSON.parse(e.data);
+    showToast(d.msg);
+  });
+
+  es.addEventListener('refresh_done', e => {
+    const d = JSON.parse(e.data);
+    showToast(`✓ ${d.total} new · ${d.analyzed} analyzed · ${d.embedded} embedded`);
+    // reload articles and feeds silently
+    Promise.all([loadFeeds(), loadArticles()]);
+  });
+
+  es.addEventListener('feed_added', e => {
+    const d = JSON.parse(e.data);
+    showToast(`+ Feed added: ${d.name}`);
+    loadFeeds();
+  });
+
+  es.onerror = () => {
+    // reconnect after 3s
+    es.close();
+    setTimeout(connectLive, 3000);
+  };
+}
+
+connectLive();
 init();
 </script>
 </body>
