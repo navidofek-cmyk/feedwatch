@@ -382,10 +382,23 @@ def forums(
 def start(
     host: str = typer.Option("0.0.0.0", "--host", "-H"),
     port: int = typer.Option(8000, "--port", "-p"),
+    api_key: str = typer.Option("", "--api-key", "-k", help="Anthropic API key (or set ANTHROPIC_API_KEY env var)"),
 ):
     """Start server + interactive REPL. Browser gets live updates via SSE."""
-    import asyncio
+    import os, asyncio
     from feedwatch.cli.repl import run_start
+
+    # priorita: --api-key argument > env var > interaktivní prompt
+    key = api_key or os.environ.get("ANTHROPIC_API_KEY", "")
+    if not key:
+        console.print("[dim]No API key — AI chat and summaries disabled.[/dim]")
+        console.print("[dim]Tip: feedwatch start --api-key sk-ant-...[/dim]")
+    else:
+        os.environ["ANTHROPIC_API_KEY"] = key
+        from feedwatch.config import settings
+        settings.anthropic_api_key = key
+        console.print("[green]✓[/green] API key set — AI chat enabled")
+
     asyncio.run(run_start(host, port))
 
 
@@ -418,18 +431,24 @@ Then in Claude Code you can ask:
 
 
 @app.command()
-def serve():
+def serve(
+    api_key: str = typer.Option("", "--api-key", "-k", help="Anthropic API key"),
+):
     """Start the FastAPI server."""
-    import uvicorn
+    import os, uvicorn
     from feedwatch.config import settings
 
-    console.print(
-        Panel(
-            f"[bold green]feedwatch API[/bold green]\n"
-            f"http://{settings.api_host}:{settings.api_port}/docs",
-            border_style="green",
-        )
-    )
+    key = api_key or os.environ.get("ANTHROPIC_API_KEY", "")
+    if key:
+        os.environ["ANTHROPIC_API_KEY"] = key
+        settings.anthropic_api_key = key
+        console.print("[green]✓[/green] API key set")
+
+    console.print(Panel(
+        f"[bold green]feedwatch API[/bold green]\n"
+        f"http://{settings.api_host}:{settings.api_port}/docs",
+        border_style="green",
+    ))
     uvicorn.run(
         "feedwatch.api.main:app",
         host=settings.api_host,
