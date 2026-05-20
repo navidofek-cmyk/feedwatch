@@ -322,6 +322,63 @@ def demo():
 
 
 @app.command()
+def autism():
+    """Add preset autism/PAS community feeds (Reddit, forums, organizations)."""
+    async def _autism():
+        from feedwatch.db import init_db, AsyncSessionLocal
+        from feedwatch.services.scraper import add_autism_feeds, REDDIT_AUTISM_FEEDS
+
+        await init_db()
+        async with AsyncSessionLocal() as db:
+            with Progress(SpinnerColumn(), TextColumn("{task.description}"), console=console) as p:
+                t = p.add_task("Adding autism community feeds...", total=None)
+                added = await add_autism_feeds(db)
+                p.update(t, description="Done!")
+
+        console.print()
+        console.print(Panel(
+            f"[green]Added {added} new feeds[/green]\n\n" +
+            "\n".join(f"  [cyan]•[/cyan] {f['name']} [dim]({f['category']})[/dim]"
+                      for f in REDDIT_AUTISM_FEEDS),
+            title="[bold]Autism / PAS community feeds[/bold]",
+            border_style="cyan",
+        ))
+        console.print()
+        console.print("[dim]Now run:[/dim] [bold cyan]feedwatch refresh[/bold cyan] [dim]to fetch posts[/dim]")
+
+    _run(_autism())
+
+
+@app.command()
+def forums(
+    question: str = typer.Argument(
+        "What are parents of autistic children discussing most?",
+        help="Question for the forum digest agent"
+    ),
+):
+    """Ask the AI agent about parent forum discussions (autism/PAS community)."""
+    async def _forums():
+        from feedwatch.db import init_db, AsyncSessionLocal
+        from feedwatch.agents.forum_agent import digest
+
+        await init_db()
+        with Progress(SpinnerColumn(), TextColumn("{task.description}"), console=console, transient=True) as p:
+            p.add_task("Reading forum discussions...", total=None)
+            async with AsyncSessionLocal() as db:
+                answer = await digest(question, db)
+
+        console.print()
+        console.print(Panel(
+            answer,
+            title="[bold cyan]Forum digest — parent community[/bold cyan]",
+            border_style="cyan",
+            padding=(1, 2),
+        ))
+
+    _run(_forums())
+
+
+@app.command()
 def serve():
     """Start the FastAPI server."""
     import uvicorn
