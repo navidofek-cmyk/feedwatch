@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>feedwatch</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg:        #0d0f16;
+      --surface:   #13151f;
+      --surface2:  #1c1f2e;
+      --surface3:  #242840;
+      --border:    #2a2e44;
+      --accent:    #7c6dfa;
+      --accent2:   #50d2b2;
+      --text:      #e2e5f0;
+      --text-dim:  #7a80a0;
+      --green:     #50d2b2;
+      --red:       #f7735e;
+      --yellow:    #f9c84f;
+      --mono:      "JetBrains Mono", monospace;
+      --radius:    10px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body { background: var(--bg); color: var(--text); font-family: "Inter", sans-serif; font-size: 15px; line-height: 1.6; display: flex; flex-direction: column; min-height: 100vh; }
+
+    /* ── TOPBAR ── */
+    .topbar {
+      position: sticky; top: 0; z-index: 100;
+      background: rgba(13,15,22,.9); backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; gap: 1rem;
+      padding: .75rem 1.5rem;
+    }
+    .logo { font-size: 1.1rem; font-weight: 800; color: var(--accent); letter-spacing: -.5px; white-space: nowrap; }
+    .logo span { color: var(--accent2); }
+    .search-wrap { flex: 1; max-width: 440px; position: relative; }
+    .search-wrap input {
+      width: 100%; background: var(--surface2); border: 1px solid var(--border);
+      border-radius: var(--radius); color: var(--text); padding: .5rem 1rem .5rem 2.4rem;
+      font-size: .88rem; outline: none; transition: border-color .2s;
+    }
+    .search-wrap input:focus { border-color: var(--accent); }
+    .search-wrap input::placeholder { color: var(--text-dim); }
+    .search-icon { position: absolute; left: .75rem; top: 50%; transform: translateY(-50%); color: var(--text-dim); font-size: .9rem; pointer-events: none; }
+    .topbar-right { margin-left: auto; display: flex; align-items: center; gap: .75rem; }
+    .btn { display: inline-flex; align-items: center; gap: .35rem; padding: .45rem 1rem; border-radius: var(--radius); font-size: .83rem; font-weight: 600; cursor: pointer; border: none; transition: all .18s; }
+    .btn-primary { background: var(--accent); color: #fff; }
+    .btn-primary:hover { background: #6a5de8; }
+    .btn-outline { background: transparent; color: var(--text-dim); border: 1px solid var(--border); }
+    .btn-outline:hover { color: var(--text); border-color: var(--accent); }
+    .btn:disabled { opacity: .5; cursor: not-allowed; }
+
+    /* ── LAYOUT ── */
+    .layout { display: flex; flex: 1; overflow: hidden; }
+    .sidebar { width: 240px; flex-shrink: 0; border-right: 1px solid var(--border); padding: 1.25rem 1rem; overflow-y: auto; }
+    .main { flex: 1; padding: 1.5rem; overflow-y: auto; }
+
+    /* ── SIDEBAR ── */
+    .sidebar-section { margin-bottom: 1.75rem; }
+    .sidebar-label { font-size: .7rem; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: var(--text-dim); margin-bottom: .6rem; padding: 0 .5rem; }
+    .feed-item {
+      display: flex; align-items: center; gap: .6rem;
+      padding: .45rem .65rem; border-radius: 8px;
+      cursor: pointer; transition: background .15s; font-size: .875rem;
+    }
+    .feed-item:hover { background: var(--surface2); }
+    .feed-item.active { background: var(--surface3); color: var(--accent); }
+    .feed-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+    .feed-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .feed-count { font-size: .75rem; color: var(--text-dim); font-family: var(--mono); }
+    .filter-btn {
+      display: flex; align-items: center; gap: .5rem;
+      padding: .4rem .65rem; border-radius: 8px;
+      cursor: pointer; font-size: .875rem; transition: background .15s;
+      width: 100%; background: none; border: none; color: var(--text); text-align: left;
+    }
+    .filter-btn:hover { background: var(--surface2); }
+    .filter-btn.active { background: var(--surface3); }
+    .filter-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+
+    /* ── STATS BAR ── */
+    .stats-bar { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 1.5rem; }
+    .stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 1rem 1.25rem; }
+    .stat-val { font-size: 1.6rem; font-weight: 800; font-family: var(--mono); letter-spacing: -1px; }
+    .stat-label { font-size: .78rem; color: var(--text-dim); margin-top: .15rem; }
+
+    /* ── ASK PANEL ── */
+    .ask-panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.25rem; margin-bottom: 1.5rem; }
+    .ask-header { display: flex; align-items: center; gap: .5rem; margin-bottom: .75rem; font-weight: 700; font-size: .9rem; }
+    .ask-header .ai-badge { background: rgba(124,109,250,.18); color: var(--accent); font-size: .7rem; font-weight: 700; padding: .15rem .5rem; border-radius: 100px; letter-spacing: .5px; }
+    .ask-row { display: flex; gap: .6rem; }
+    .ask-input { flex: 1; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius); color: var(--text); padding: .55rem 1rem; font-size: .88rem; outline: none; transition: border-color .2s; }
+    .ask-input:focus { border-color: var(--accent); }
+    .ask-input::placeholder { color: var(--text-dim); }
+    .ask-answer { margin-top: 1rem; padding: 1rem 1.2rem; background: var(--surface2); border-left: 3px solid var(--accent); border-radius: 0 var(--radius) var(--radius) 0; font-size: .88rem; line-height: 1.7; white-space: pre-wrap; display: none; }
+
+    /* ── ARTICLES ── */
+    .articles-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; }
+    .articles-title { font-weight: 700; font-size: 1rem; }
+    .articles-count { font-size: .8rem; color: var(--text-dim); font-family: var(--mono); }
+    .articles-grid { display: flex; flex-direction: column; gap: .7rem; }
+    .article-card {
+      background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+      padding: 1rem 1.25rem; cursor: pointer;
+      transition: border-color .18s, transform .15s;
+      display: flex; gap: 1rem; align-items: flex-start;
+    }
+    .article-card:hover { border-color: var(--accent); transform: translateX(3px); }
+    .article-card.negative:hover { border-color: var(--red); }
+    .article-card.neutral:hover { border-color: var(--yellow); }
+    .sentiment-bar { width: 3px; flex-shrink: 0; border-radius: 2px; align-self: stretch; min-height: 40px; }
+    .s-positive { background: var(--green); }
+    .s-negative { background: var(--red); }
+    .s-neutral  { background: var(--yellow); }
+    .article-body { flex: 1; min-width: 0; }
+    .article-title { font-weight: 600; font-size: .9rem; line-height: 1.45; margin-bottom: .35rem; }
+    .article-title a { color: var(--text); text-decoration: none; }
+    .article-title a:hover { color: var(--accent); }
+    .article-summary { font-size: .82rem; color: var(--text-dim); line-height: 1.5; margin-bottom: .5rem; }
+    .article-meta { display: flex; align-items: center; gap: .75rem; flex-wrap: wrap; }
+    .meta-feed { font-size: .75rem; color: var(--accent); font-weight: 600; }
+    .meta-time { font-size: .75rem; color: var(--text-dim); }
+    .meta-score { font-size: .75rem; font-family: var(--mono); font-weight: 600; }
+    .score-pos { color: var(--green); }
+    .score-neg { color: var(--red); }
+    .score-neu { color: var(--yellow); }
+
+    /* ── EMPTY / LOADING ── */
+    .loading { text-align: center; color: var(--text-dim); padding: 3rem; font-size: .9rem; }
+    .spinner { display: inline-block; width: 20px; height: 20px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin .7s linear infinite; margin-right: .5rem; vertical-align: middle; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── TOAST ── */
+    .toast { position: fixed; bottom: 1.5rem; right: 1.5rem; background: var(--surface3); border: 1px solid var(--border); border-radius: var(--radius); padding: .75rem 1.25rem; font-size: .85rem; z-index: 999; display: none; animation: fadeIn .2s ease; }
+    @keyframes fadeIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:none; } }
+
+    /* ── MODAL (add feed) ── */
+    .overlay { position: fixed; inset: 0; background: rgba(0,0,0,.6); z-index: 200; display: none; align-items: center; justify-content: center; }
+    .overlay.open { display: flex; }
+    .modal { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 1.75rem; width: 420px; max-width: 95vw; }
+    .modal-title { font-weight: 800; font-size: 1.05rem; margin-bottom: 1.25rem; }
+    .form-group { margin-bottom: 1rem; }
+    .form-label { font-size: .8rem; font-weight: 600; color: var(--text-dim); margin-bottom: .35rem; display: block; }
+    .form-input { width: 100%; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; color: var(--text); padding: .55rem .9rem; font-size: .88rem; outline: none; transition: border-color .2s; }
+    .form-input:focus { border-color: var(--accent); }
+    .modal-actions { display: flex; gap: .75rem; justify-content: flex-end; margin-top: 1.5rem; }
+
+    @media (max-width: 768px) {
+      .sidebar { display: none; }
+      .stats-bar { grid-template-columns: repeat(2, 1fr); }
+    }
+  </style>
+</head>
+<body>
+
+<!-- TOPBAR -->
+<header class="topbar">
+  <div class="logo">feed<span>watch</span></div>
+  <div class="search-wrap">
+    <span class="search-icon">⌕</span>
+    <input id="searchInput" type="text" placeholder="Semantic search articles..." />
+  </div>
+  <div class="topbar-right">
+    <button class="btn btn-outline" id="btnRefresh">⟳ Refresh</button>
+    <button class="btn btn-primary" id="btnAddFeed">+ Add feed</button>
+  </div>
+</header>
+
+<div class="layout">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-label">Feeds</div>
+      <div id="feedList">
+        <div class="loading" style="padding:1rem 0;font-size:.8rem;">Loading…</div>
+      </div>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-label">Sentiment</div>
+      <button class="filter-btn active" data-sentiment="all" onclick="setSentiment(this,'all')">
+        <span class="filter-dot" style="background:var(--text-dim)"></span> All
+      </button>
+      <button class="filter-btn" data-sentiment="positive" onclick="setSentiment(this,'positive')">
+        <span class="filter-dot" style="background:var(--green)"></span> Positive
+      </button>
+      <button class="filter-btn" data-sentiment="neutral" onclick="setSentiment(this,'neutral')">
+        <span class="filter-dot" style="background:var(--yellow)"></span> Neutral
+      </button>
+      <button class="filter-btn" data-sentiment="negative" onclick="setSentiment(this,'negative')">
+        <span class="filter-dot" style="background:var(--red)"></span> Negative
+      </button>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="main">
+
+    <!-- STATS -->
+    <div class="stats-bar" id="statsBar">
+      <div class="stat-card"><div class="stat-val" id="sTotal">—</div><div class="stat-label">Total articles</div></div>
+      <div class="stat-card"><div class="stat-val" style="color:var(--green)" id="sPos">—</div><div class="stat-label">Positive</div></div>
+      <div class="stat-card"><div class="stat-val" style="color:var(--red)" id="sNeg">—</div><div class="stat-label">Negative</div></div>
+      <div class="stat-card"><div class="stat-val" style="color:var(--accent)" id="sFeeds">—</div><div class="stat-label">Feeds tracked</div></div>
+    </div>
+
+    <!-- ASK AI -->
+    <div class="ask-panel">
+      <div class="ask-header">
+        🤖 Ask AI <span class="ai-badge">Claude</span>
+      </div>
+      <div class="ask-row">
+        <input class="ask-input" id="askInput" type="text" placeholder="What are the biggest AI stories today?" />
+        <button class="btn btn-primary" id="btnAsk">Ask</button>
+      </div>
+      <div class="ask-answer" id="askAnswer"></div>
+    </div>
+
+    <!-- ARTICLES -->
+    <div class="articles-header">
+      <span class="articles-title" id="articlesTitle">Latest articles</span>
+      <span class="articles-count" id="articlesCount"></span>
+    </div>
+    <div class="articles-grid" id="articlesList">
+      <div class="loading"><span class="spinner"></span> Loading articles…</div>
+    </div>
+
+  </main>
+</div>
+
+<!-- ADD FEED MODAL -->
+<div class="overlay" id="modal">
+  <div class="modal">
+    <div class="modal-title">Add RSS feed</div>
+    <div class="form-group">
+      <label class="form-label">URL</label>
+      <input class="form-input" id="fUrl" type="url" placeholder="https://hnrss.org/frontpage" />
+    </div>
+    <div class="form-group">
+      <label class="form-label">Name</label>
+      <input class="form-input" id="fName" type="text" placeholder="Hacker News" />
+    </div>
+    <div class="form-group">
+      <label class="form-label">Category</label>
+      <input class="form-input" id="fCat" type="text" placeholder="tech" value="general" />
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" id="btnSaveFeed">Add feed</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const API = '';  // same origin
+let state = { feedId: null, sentiment: 'all', search: '', articles: [], feeds: [] };
+let searchTimer = null;
+
+const FEED_COLORS = ['#7c6dfa','#50d2b2','#f7735e','#f9c84f','#a78bfa','#34d399','#fb7185','#60a5fa'];
+
+// ── FETCH HELPERS ────────────────────────────────
+async function apiFetch(path, opts={}) {
+  const r = await fetch(API + path, opts);
+  if (!r.ok) throw new Error(await r.text());
+  return r.json();
+}
+
+// ── INIT ─────────────────────────────────────────
+async function init() {
+  await Promise.all([loadFeeds(), loadArticles()]);
+}
+
+// ── FEEDS ─────────────────────────────────────────
+async function loadFeeds() {
+  try {
+    state.feeds = await apiFetch('/feeds/');
+    renderFeeds();
+    renderStats();
+  } catch(e) { console.error(e); }
+}
+
+function renderFeeds() {
+  const el = document.getElementById('feedList');
+  let html = `<button class="feed-item ${!state.feedId ? 'active' : ''}" onclick="setFeed(null)">
+    <span class="feed-dot" style="background:var(--text-dim)"></span>
+    <span class="feed-name">All feeds</span>
+  </button>`;
+  state.feeds.forEach((f,i) => {
+    const color = FEED_COLORS[i % FEED_COLORS.length];
+    html += `<button class="feed-item ${state.feedId===f.id?'active':''}" onclick="setFeed(${f.id})">
+      <span class="feed-dot" style="background:${color}"></span>
+      <span class="feed-name">${esc(f.name)}</span>
+      <span class="feed-count">${f.category}</span>
+    </button>`;
+  });
+  el.innerHTML = html;
+}
+
+// ── ARTICLES ──────────────────────────────────────
+async function loadArticles() {
+  const el = document.getElementById('articlesList');
+  el.innerHTML = `<div class="loading"><span class="spinner"></span> Loading…</div>`;
+
+  try {
+    let path, articles;
+    if (state.search) {
+      const res = await apiFetch('/articles/search?q=' + encodeURIComponent(state.search) + '&limit=30');
+      articles = res.results || res;
+    } else {
+      let qs = '?limit=50';
+      if (state.feedId) qs += `&feed_id=${state.feedId}`;
+      if (state.sentiment !== 'all') qs += `&sentiment=${state.sentiment}`;
+      articles = await apiFetch('/articles/' + qs);
+    }
+    state.articles = articles;
+    renderArticles(articles);
+    renderStats();
+  } catch(e) {
+    el.innerHTML = `<div class="loading">Error loading articles.</div>`;
+  }
+}
+
+function renderArticles(articles) {
+  const el = document.getElementById('articlesList');
+  const count = document.getElementById('articlesCount');
+  count.textContent = articles.length + ' articles';
+
+  if (!articles.length) {
+    el.innerHTML = `<div class="loading">No articles found.</div>`;
+    return;
+  }
+
+  el.innerHTML = articles.map(a => {
+    const sClass = a.sentiment_label || 'neutral';
+    const scoreColor = sClass === 'positive' ? 'score-pos' : sClass === 'negative' ? 'score-neg' : 'score-neu';
+    const score = a.sentiment_score != null ? ((a.sentiment_score > 0 ? '+' : '') + a.sentiment_score.toFixed(2)) : '—';
+    const feedName = state.feeds.find(f => f.id === a.feed_id)?.name || '';
+    const pub = a.published_at ? timeAgo(new Date(a.published_at)) : '';
+    const summary = a.summary || a.description?.slice(0,120) || '';
+
+    return `<div class="article-card ${sClass}">
+      <div class="sentiment-bar s-${sClass}"></div>
+      <div class="article-body">
+        <div class="article-title"><a href="${esc(a.url)}" target="_blank" rel="noopener">${esc(a.title)}</a></div>
+        ${summary ? `<div class="article-summary">${esc(summary)}</div>` : ''}
+        <div class="article-meta">
+          ${feedName ? `<span class="meta-feed">${esc(feedName)}</span>` : ''}
+          ${pub ? `<span class="meta-time">${pub}</span>` : ''}
+          <span class="meta-score ${scoreColor}">${score}</span>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ── STATS ─────────────────────────────────────────
+async function renderStats() {
+  try {
+    const all = await apiFetch('/articles/?limit=1000');
+    document.getElementById('sTotal').textContent  = all.length;
+    document.getElementById('sPos').textContent    = all.filter(a => a.sentiment_label === 'positive').length;
+    document.getElementById('sNeg').textContent    = all.filter(a => a.sentiment_label === 'negative').length;
+    document.getElementById('sFeeds').textContent  = state.feeds.length;
+  } catch(e) {}
+}
+
+// ── FILTERS ───────────────────────────────────────
+function setFeed(id) {
+  state.feedId = id;
+  renderFeeds();
+  loadArticles();
+}
+
+function setSentiment(btn, val) {
+  state.sentiment = val;
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  loadArticles();
+}
+
+// ── SEARCH ────────────────────────────────────────
+document.getElementById('searchInput').addEventListener('input', e => {
+  clearTimeout(searchTimer);
+  state.search = e.target.value.trim();
+  const title = document.getElementById('articlesTitle');
+  title.textContent = state.search ? `Search: "${state.search}"` : 'Latest articles';
+  searchTimer = setTimeout(loadArticles, 400);
+});
+
+// ── REFRESH ───────────────────────────────────────
+document.getElementById('btnRefresh').addEventListener('click', async () => {
+  const btn = document.getElementById('btnRefresh');
+  btn.disabled = true;
+  btn.textContent = '⟳ Refreshing…';
+  try {
+    const r = await apiFetch('/refresh', { method: 'POST' });
+    const total = Object.values(r.fetched).reduce((a,b) => a+b, 0);
+    showToast(`✓ ${total} new articles · ${r.analyzed} analyzed · ${r.embedded} embedded`);
+    await Promise.all([loadFeeds(), loadArticles()]);
+  } catch(e) {
+    showToast('Refresh failed: ' + e.message, true);
+  }
+  btn.disabled = false;
+  btn.textContent = '⟳ Refresh';
+});
+
+// ── ASK AI ────────────────────────────────────────
+document.getElementById('btnAsk').addEventListener('click', askAI);
+document.getElementById('askInput').addEventListener('keydown', e => { if (e.key === 'Enter') askAI(); });
+
+async function askAI() {
+  const q = document.getElementById('askInput').value.trim();
+  if (!q) return;
+  const btn = document.getElementById('btnAsk');
+  const box = document.getElementById('askAnswer');
+  btn.disabled = true;
+  btn.textContent = '…';
+  box.style.display = 'block';
+  box.textContent = 'Thinking…';
+  try {
+    const r = await apiFetch('/ask', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({question: q}) });
+    box.textContent = r.answer;
+  } catch(e) {
+    box.textContent = 'Error: ' + e.message;
+  }
+  btn.disabled = false;
+  btn.textContent = 'Ask';
+}
+
+// ── ADD FEED MODAL ────────────────────────────────
+document.getElementById('btnAddFeed').addEventListener('click', () => {
+  document.getElementById('modal').classList.add('open');
+});
+document.getElementById('modal').addEventListener('click', e => {
+  if (e.target === document.getElementById('modal')) closeModal();
+});
+function closeModal() { document.getElementById('modal').classList.remove('open'); }
+
+document.getElementById('btnSaveFeed').addEventListener('click', async () => {
+  const url = document.getElementById('fUrl').value.trim();
+  const name = document.getElementById('fName').value.trim();
+  const cat  = document.getElementById('fCat').value.trim() || 'general';
+  if (!url || !name) { showToast('URL and name are required', true); return; }
+  try {
+    await apiFetch('/feeds/', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({url, name, category: cat}) });
+    showToast(`✓ Feed "${name}" added`);
+    closeModal();
+    await loadFeeds();
+  } catch(e) {
+    showToast('Error: ' + e.message, true);
+  }
+});
+
+// ── UTILS ─────────────────────────────────────────
+function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+function timeAgo(date) {
+  const diff = (Date.now() - date) / 1000;
+  if (diff < 60)   return 'just now';
+  if (diff < 3600) return Math.floor(diff/60) + 'm ago';
+  if (diff < 86400) return Math.floor(diff/3600) + 'h ago';
+  return Math.floor(diff/86400) + 'd ago';
+}
+
+function showToast(msg, err=false) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.style.display = 'block';
+  t.style.borderColor = err ? 'var(--red)' : 'var(--green)';
+  t.style.color = err ? 'var(--red)' : 'var(--green)';
+  setTimeout(() => t.style.display = 'none', 3500);
+}
+
+init();
+</script>
+</body>
+</html>
