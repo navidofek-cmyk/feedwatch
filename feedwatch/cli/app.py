@@ -379,6 +379,34 @@ def forums(
 
 
 @app.command()
+def mcp():
+    """Start the MCP server (stdio) for Claude Code / Codex integration."""
+    import asyncio
+    from feedwatch.mcp_server import run as mcp_run
+
+    config_example = """\
+Add to ~/.claude/settings.json:
+
+{
+  "mcpServers": {
+    "feedwatch": {
+      "command": "uv",
+      "args": ["run", "feedwatch-mcp"],
+      "cwd": "/ABSOLUTE/PATH/TO/feedwatch"
+    }
+  }
+}
+
+Then in Claude Code you can ask:
+  "Search my feeds for VOKS discussions"
+  "What are autism parents talking about on Reddit?"
+  "Summarize today's news from my feeds"
+"""
+    console.print(Panel(config_example, title="[bold cyan]feedwatch MCP server[/bold cyan]", border_style="cyan"))
+    asyncio.run(mcp_run())
+
+
+@app.command()
 def serve():
     """Start the FastAPI server."""
     import uvicorn

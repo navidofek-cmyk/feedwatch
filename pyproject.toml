@@ -25,10 +25,12 @@ dependencies = [
     "apscheduler>=3.10",
     "beautifulsoup4>=4.12",
     "praw>=7.7",
+    "mcp>=1.0",
 ]
 
 [project.scripts]
 feedwatch = "feedwatch.cli.app:app"
+feedwatch-mcp = "feedwatch.mcp_server:main"
 
 [dependency-groups]
 dev = [
