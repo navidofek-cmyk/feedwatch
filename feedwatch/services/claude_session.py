@@ -96,6 +96,29 @@ async def chat(message: str, context: str = "") -> AsyncGenerator[str, None]:
             yield text
 
 
+async def warmup():
+    """
+    Předehřeje claude session při startu serveru.
+    Spustí claude s krátkým systémovým promptem → uloží session_id.
+    Všechny následující dotazy pak použijí --resume (rychlejší, cache).
+    """
+    if not _claude_bin:
+        return
+    global _session_id
+    if _session_id:
+        return  # už zahřátá
+
+    system_prompt = (
+        "You are feedwatch assistant — you help users explore their RSS feeds, "
+        "news articles, and autism/education community discussions. "
+        "Be concise and always cite sources with URLs. "
+        "Respond in the same language the user writes in. Ready."
+    )
+    # spustí claude, vytvoří session, uloží session_id
+    async for _ in _run_claude(system_prompt):
+        pass  # odpověď nepotřebujeme, jen session_id
+
+
 def reset_session():
     """Resetuje session — příští zpráva začne novou konverzaci."""
     global _session_id
@@ -104,3 +127,8 @@ def reset_session():
 
 def has_claude() -> bool:
     return _claude_bin is not None
+
+
+def session_ready() -> bool:
+    """Vrátí True pokud je session předehřátá."""
+    return _session_id is not None

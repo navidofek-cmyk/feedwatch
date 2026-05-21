@@ -18,6 +18,13 @@ async def lifespan(app: FastAPI):
     await init_db()
     scheduler = get_scheduler()
     scheduler.start()
+
+    # předehřeje claude session na pozadí — chat bude hned připravený
+    import asyncio
+    from feedwatch.services.claude_session import warmup, has_claude
+    if has_claude():
+        asyncio.create_task(warmup())
+
     yield
     scheduler.shutdown()
 

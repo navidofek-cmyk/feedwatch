@@ -423,6 +423,17 @@ async def _stream_chat(message: str, history: list[dict], db: AsyncSession):
         messages.append({"role": "user", "content": tool_results})
 
 
+@router.get("/status")
+async def chat_status():
+    """Stav claude session — je připravená?"""
+    from feedwatch.services.claude_session import session_ready, has_claude
+    return {
+        "has_claude": has_claude(),
+        "session_ready": session_ready(),
+        "mode": "claude_cli" if has_claude() else "db_only",
+    }
+
+
 @router.post("/reset")
 async def chat_reset():
     """Reset claude session — starts fresh conversation."""

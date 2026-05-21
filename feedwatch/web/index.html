@@ -267,6 +267,9 @@
 <!-- CHAT PAGE -->
 <div class="layout page chat-page" id="page-chat">
   <div class="chat-messages" id="chatMessages">
+    <div id="chatStatusBar" style="display:none;padding:.5rem 1rem;font-size:.78rem;
+         font-family:var(--mono);border-bottom:1px solid var(--border);background:var(--s1)">
+    </div>
     <div class="chat-welcome">
       <h3>💬 Chat with your feeds</h3>
       <p>Ask anything about your RSS feeds, forum discussions, or autism/PAS community.</p>
@@ -799,8 +802,32 @@ function connectLive() {
   };
 }
 
+// ── CHAT STATUS ───────────────────────────────────────────────────────────────
+async function checkChatStatus() {
+  try {
+    const s = await apiFetch('/chat/status');
+    const bar = document.getElementById('chatStatusBar');
+    if (!bar) return;
+    if (s.session_ready) {
+      bar.style.display = 'block';
+      bar.innerHTML = '<span style="color:var(--green)">● claude session ready</span> <span style="color:var(--dim)">— chat má paměť, odpovídá přes subscription</span>';
+    } else if (s.has_claude) {
+      bar.style.display = 'block';
+      bar.innerHTML = '<span style="color:var(--yellow)">⠋ claude se zahřívá...</span>';
+      setTimeout(checkChatStatus, 3000);
+    } else {
+      bar.style.display = 'block';
+      bar.innerHTML = '<span style="color:var(--dim)">● základní mode — bez claude CLI</span>';
+    }
+  } catch(e) {}
+}
+
+// po přepnutí na chat tab zkontroluj status
+const origSwitchPage = window.switchPage;
+
 connectLive();
 connectTerminal();
+checkChatStatus();
 init();
 </script>
 </body>
