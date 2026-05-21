@@ -30,7 +30,6 @@ def broadcast(event: str, data: dict) -> None:
 
 
 async def _stream(queue: asyncio.Queue) -> AsyncGenerator[str, None]:
-    # keep-alive ping každých 15s
     yield "event: connected\ndata: {}\n\n"
     while True:
         try:
@@ -38,8 +37,10 @@ async def _stream(queue: asyncio.Queue) -> AsyncGenerator[str, None]:
             yield msg
         except asyncio.TimeoutError:
             yield ": ping\n\n"
+        except asyncio.CancelledError:
+            return  # čistý shutdown — bez traceback
         except Exception:
-            break
+            return
 
 
 @router.get("/live")
@@ -47,7 +48,7 @@ async def live_feed():
     queue: asyncio.Queue = asyncio.Queue(maxsize=50)
     _subscribers.append(queue)
 
-    async def cleanup():
+    def cleanup():
         if queue in _subscribers:
             _subscribers.remove(queue)
 
@@ -55,8 +56,12 @@ async def live_feed():
         try:
             async for chunk in _stream(queue):
                 yield chunk
+        except asyncio.CancelledError:
+            pass  # server se vypíná — ok
+        except Exception:
+            pass
         finally:
-            await cleanup()
+            cleanup()
 
     return StreamingResponse(
         generator(),

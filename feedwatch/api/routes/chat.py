@@ -445,8 +445,11 @@ async def chat_reset():
 @router.post("/stream")
 async def chat_stream(payload: ChatRequest, db: AsyncSession = Depends(get_db)):
     async def generator():
-        async for chunk in _stream_chat(payload.message, payload.history, db):
-            yield chunk
+        try:
+            async for chunk in _stream_chat(payload.message, payload.history, db):
+                yield chunk
+        except asyncio.CancelledError:
+            pass  # klient se odpojil nebo server se vypíná
 
     return StreamingResponse(
         generator(),
