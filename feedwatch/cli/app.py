@@ -504,8 +504,19 @@ def serve(
     import os, sys, uvicorn, logging
     from feedwatch.config import settings
 
-    # potlač chybové výpisy při normálním ukončení
-    logging.getLogger("uvicorn.error").setLevel(logging.CRITICAL)
+    # potlač HF warning před importem sentence-transformers
+    os.environ.setdefault("HF_HUB_OFFLINE", "1")
+    os.environ.setdefault("TRANSFORMERS_OFFLINE", "1")
+    os.environ.setdefault("TOKENIZERS_PARALLELISM", "false")
+
+    # filtr — schová CancelledError traceback při Ctrl+C
+    class _ShutdownFilter(logging.Filter):
+        def filter(self, record):
+            msg = record.getMessage() + str(record.exc_info or "")
+            return "CancelledError" not in msg and "KeyboardInterrupt" not in msg
+
+    for _log in ("uvicorn.error", "uvicorn", ""):
+        logging.getLogger(_log).addFilter(_ShutdownFilter())
 
     key = api_key or os.environ.get("ANTHROPIC_API_KEY", "")
     if key:
