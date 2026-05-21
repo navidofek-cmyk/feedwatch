@@ -526,8 +526,8 @@ def serve(
             host=settings.api_host,
             port=settings.api_port,
             reload=False,
-            log_level="warning",      # méně logu
-            access_log=True,
+            log_level="info",
+            access_log=False,   # bez logu každého requestu
         )
     except KeyboardInterrupt:
         pass  # čistý exit bez traceback
