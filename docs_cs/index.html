@@ -1,0 +1,930 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>feedwatch — Česká dokumentace</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet"/>
+  <style>
+    :root{
+      --bg:#0d0f16;--s1:#13151f;--s2:#1c1f2e;--s3:#242840;
+      --border:#2a2e44;--accent:#7c6dfa;--accent2:#50d2b2;--accent3:#f7735e;
+      --text:#e2e5f0;--dim:#7a80a0;
+      --green:#50d2b2;--red:#f7735e;--yellow:#f9c84f;
+      --mono:"JetBrains Mono",monospace;--r:10px;
+    }
+    *{box-sizing:border-box;margin:0;padding:0}
+    html{scroll-behavior:smooth}
+    body{background:var(--bg);color:var(--text);font-family:"Inter",sans-serif;font-size:15px;line-height:1.7;display:flex;flex-direction:column;min-height:100vh}
+    a{color:var(--accent);text-decoration:none}
+    a:hover{text-decoration:underline}
+    code{font-family:var(--mono);background:var(--s2);padding:.15em .4em;border-radius:5px;font-size:.85em;color:var(--accent2)}
+    h1{font-size:2.4rem;font-weight:900;letter-spacing:-1.5px;margin-bottom:.75rem}
+    h2{font-size:1.7rem;font-weight:800;letter-spacing:-1px;margin:2.5rem 0 1rem;padding-top:1rem}
+    h3{font-size:1.15rem;font-weight:700;margin:1.75rem 0 .6rem;color:var(--accent2)}
+    h4{font-size:.95rem;font-weight:700;margin:1.25rem 0 .4rem;color:var(--yellow)}
+    p{margin-bottom:.9rem;color:var(--text)}
+    ul,ol{padding-left:1.4rem;margin-bottom:.9rem}
+    li{margin-bottom:.3rem}
+    strong{font-weight:700;color:var(--text)}
+
+    /* LAYOUT */
+    .shell{display:flex;flex:1}
+    nav.sidebar{
+      width:260px;flex-shrink:0;position:sticky;top:0;height:100vh;
+      overflow-y:auto;border-right:1px solid var(--border);
+      background:var(--s1);padding:1.25rem 0;
+    }
+    main{flex:1;padding:2.5rem 3rem;max-width:900px}
+
+    /* SIDEBAR */
+    .nav-logo{font-size:1.1rem;font-weight:900;color:var(--accent);padding:.5rem 1.25rem 1.25rem;border-bottom:1px solid var(--border);margin-bottom:.75rem;display:block}
+    .nav-logo span{color:var(--accent2)}
+    .nav-section{font-size:.65rem;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--dim);padding:.6rem 1.25rem .2rem;margin-top:.5rem}
+    .nav-link{display:block;padding:.35rem 1.25rem;font-size:.84rem;color:var(--dim);transition:all .15s;border-left:2px solid transparent}
+    .nav-link:hover{color:var(--text);background:var(--s2);text-decoration:none}
+    .nav-link.active{color:var(--accent);border-left-color:var(--accent);background:rgba(124,109,250,.08)}
+    .nav-sub{padding-left:2rem;font-size:.8rem}
+
+    /* CODE BLOCKS */
+    .cb{background:#0a0b11;border:1px solid var(--border);border-radius:var(--r);overflow:hidden;margin:1.25rem 0}
+    .cb-head{background:var(--s2);padding:.5rem 1rem;font-family:var(--mono);font-size:.72rem;color:var(--dim);display:flex;justify-content:space-between;align-items:center}
+    .cb-body{padding:1.1rem 1.25rem;font-family:var(--mono);font-size:.82rem;line-height:1.8;overflow-x:auto;white-space:pre}
+    .kw{color:#c792ea} .fn{color:var(--accent2)} .st{color:var(--yellow)}
+    .cm{color:var(--dim);font-style:italic} .nb{color:var(--accent3)}
+    .op{color:var(--accent)} .cl{color:#82aaff}
+
+    /* CALLOUTS */
+    .callout{border-radius:var(--r);padding:1rem 1.25rem;margin:1.25rem 0;border-left:4px solid}
+    .callout-info{background:rgba(124,109,250,.08);border-color:var(--accent)}
+    .callout-tip{background:rgba(80,210,178,.08);border-color:var(--green)}
+    .callout-warn{background:rgba(249,200,79,.08);border-color:var(--yellow)}
+    .callout-title{font-weight:700;font-size:.82rem;margin-bottom:.35rem;text-transform:uppercase;letter-spacing:.5px}
+
+    /* PIPELINE */
+    .pipeline{display:flex;flex-wrap:wrap;gap:.5rem;margin:1.25rem 0;align-items:center}
+    .pipe-step{background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:.5rem .9rem;font-size:.82rem;font-family:var(--mono)}
+    .pipe-arrow{color:var(--accent);font-size:1.1rem}
+
+    /* TABLE */
+    table{width:100%;border-collapse:collapse;margin:1.25rem 0;font-size:.88rem}
+    th{background:var(--s2);padding:.6rem .9rem;text-align:left;font-weight:700;font-size:.78rem;letter-spacing:.5px;text-transform:uppercase;color:var(--dim);border-bottom:1px solid var(--border)}
+    td{padding:.55rem .9rem;border-bottom:1px solid rgba(42,46,68,.5)}
+    tr:hover td{background:rgba(28,31,46,.5)}
+
+    /* ARCH DIAGRAM */
+    .arch{background:#0a0b11;border:1px solid var(--border);border-radius:var(--r);padding:1.5rem;font-family:var(--mono);font-size:.8rem;line-height:2;overflow-x:auto;white-space:pre}
+    .ah{color:var(--accent);font-weight:700} .ag{color:var(--green)} .ay{color:var(--yellow)} .ao{color:var(--accent3)} .ap{color:#82aaff}
+
+    /* BADGE */
+    .badge{display:inline-block;font-size:.68rem;font-weight:700;font-family:var(--mono);padding:.15rem .55rem;border-radius:5px;margin:.1rem}
+    .b-p{background:rgba(124,109,250,.18);color:var(--accent)}
+    .b-g{background:rgba(80,210,178,.18);color:var(--green)}
+    .b-o{background:rgba(247,115,94,.18);color:var(--accent3)}
+    .b-y{background:rgba(249,200,79,.18);color:var(--yellow)}
+
+    /* HERO */
+    .hero{background:linear-gradient(135deg,rgba(124,109,250,.12) 0%,rgba(80,210,178,.06) 100%);border:1px solid var(--border);border-radius:14px;padding:2rem 2.5rem;margin-bottom:2.5rem}
+    .hero .label{font-size:.72rem;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--accent);margin-bottom:.5rem}
+
+    /* SUBSYSTEM CARD */
+    .sys-card{background:var(--s1);border:1px solid var(--border);border-radius:var(--r);padding:1.5rem;margin:1rem 0}
+    .sys-card h3{margin-top:0}
+
+    /* SCROLL SECTIONS */
+    section{padding-top:1rem}
+
+    @media(max-width:768px){
+      nav.sidebar{display:none}
+      main{padding:1.5rem}
+    }
+  </style>
+</head>
+<body>
+<div class="shell">
+
+<!-- SIDEBAR -->
+<nav class="sidebar">
+  <a class="nav-logo" href="#uvod">feed<span>watch</span> <span style="color:var(--dim);font-size:.75rem;font-weight:400">docs</span></a>
+
+  <div class="nav-section">Přehled</div>
+  <a class="nav-link" href="#uvod">Úvod</a>
+  <a class="nav-link" href="#architektura">Architektura</a>
+  <a class="nav-link" href="#datovy-tok">Datový tok</a>
+  <a class="nav-link" href="#konfigurace">Konfigurace</a>
+
+  <div class="nav-section">Subsystémy</div>
+  <a class="nav-link" href="#fetcher">📡 Fetcher</a>
+  <a class="nav-link" href="#analyzer">😊 Analyzer</a>
+  <a class="nav-link" href="#embedder">🧠 Embedder</a>
+  <a class="nav-link" href="#database">🗄️ Databáze</a>
+  <a class="nav-link" href="#agenti">🤖 AI agenti</a>
+  <a class="nav-link nav-sub" href="#summarizer">Summarizer</a>
+  <a class="nav-link nav-sub" href="#qa-agent">Q&A agent</a>
+  <a class="nav-link nav-sub" href="#forum-agent">Forum agent</a>
+  <a class="nav-link nav-sub" href="#claude-session">Claude session</a>
+  <a class="nav-link" href="#api">🌐 REST API</a>
+  <a class="nav-link" href="#live">📡 Live SSE</a>
+  <a class="nav-link" href="#terminal-ws">🖥️ Terminal WS</a>
+  <a class="nav-link" href="#chat-endpoint">💬 Chat endpoint</a>
+  <a class="nav-link" href="#cli">💻 CLI</a>
+  <a class="nav-link" href="#repl">⌨️ REPL</a>
+  <a class="nav-link" href="#web-ui">🎨 Web UI</a>
+  <a class="nav-link" href="#mcp">🔌 MCP server</a>
+  <a class="nav-link" href="#scraper">🕷️ Scraper</a>
+
+  <div class="nav-section">Teorie</div>
+  <a class="nav-link" href="#vektory">Vektory</a>
+  <a class="nav-link" href="#sentiment">Sentiment</a>
+  <a class="nav-link" href="#tool-use">Tool use</a>
+  <a class="nav-link" href="#async">Async Python</a>
+</nav>
+
+<!-- MAIN -->
+<main>
+
+<!-- ÚVOD -->
+<section id="uvod">
+  <div class="hero">
+    <div class="label">Česká dokumentace</div>
+    <h1>feedwatch</h1>
+    <p>Asynchronní RSS agregátor s vektorovým sémantickým vyhledáváním, analýzou sentimentu a Claude AI agenty. Napsáno v čistém Pythonu.</p>
+    <div>
+      <span class="badge b-p">Python 3.11+</span>
+      <span class="badge b-g">FastAPI</span>
+      <span class="badge b-g">SQLAlchemy</span>
+      <span class="badge b-p">Claude API</span>
+      <span class="badge b-g">ChromaDB</span>
+      <span class="badge b-o">Typer + Rich</span>
+      <span class="badge b-y">uv</span>
+    </div>
+  </div>
+
+  <h2>Co feedwatch dělá</h2>
+  <p>feedwatch je pipeline — ne jen RSS čtečka. Každý článek projde pěti fázemi zpracování a skončí v prohledávatelné, analyzovatelné databázi na které běží AI agent.</p>
+
+  <div class="pipeline">
+    <div class="pipe-step">📡 RSS feed</div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-step">⚡ fetch (async)</div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-step">🗄️ SQLite</div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-step">😊 sentiment</div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-step">🧠 vektory</div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-step">✍️ shrnutí</div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-step">🤖 AI dotazy</div>
+  </div>
+</section>
+
+<!-- ARCHITEKTURA -->
+<section id="architektura">
+  <h2>Architektura projektu</h2>
+  <p>Projekt je rozdělen do vrstev — každá vrstva má jednu zodpovědnost.</p>
+
+  <div class="arch"><span class="ah">feedwatch/</span>
+├── <span class="ag">feedwatch/</span>             <span class="cm"># Python balíček</span>
+│   ├── <span class="ay">config.py</span>             <span class="cm"># pydantic-settings — čte .env</span>
+│   │
+│   ├── <span class="ap">models/</span>               <span class="cm"># SQLAlchemy ORM modely</span>
+│   │   ├── feed.py              <span class="cm"># model Feed (id, url, name, category...)</span>
+│   │   └── article.py           <span class="cm"># model Article (title, sentiment, embedding...)</span>
+│   │
+│   ├── <span class="ap">db/</span>                   <span class="cm"># databázová vrstva</span>
+│   │   └── database.py          <span class="cm"># async engine, session factory, init_db()</span>
+│   │
+│   ├── <span class="ap">services/</span>             <span class="cm"># byznys logika</span>
+│   │   ├── fetcher.py           <span class="cm"># async stahování RSS feedů</span>
+│   │   ├── analyzer.py          <span class="cm"># VADER sentiment analýza</span>
+│   │   ├── embedder.py          <span class="cm"># sentence-transformers + ChromaDB</span>
+│   │   ├── scraper.py           <span class="cm"># BeautifulSoup scraper pro fóra</span>
+│   │   ├── scheduler.py         <span class="cm"># APScheduler — automatický refresh</span>
+│   │   └── claude_session.py    <span class="cm"># persistentní claude CLI session</span>
+│   │
+│   ├── <span class="ap">agents/</span>               <span class="cm"># AI agenti</span>
+│   │   ├── summarizer.py        <span class="cm"># Claude — shrnutí článků</span>
+│   │   ├── qa_agent.py          <span class="cm"># Claude — Q&A s tool use</span>
+│   │   └── forum_agent.py       <span class="cm"># Claude — analýza rodičovských fór</span>
+│   │
+│   ├── <span class="ap">api/</span>                  <span class="cm"># FastAPI vrstva</span>
+│   │   ├── main.py              <span class="cm"># app, lifespan, statické soubory</span>
+│   │   ├── schemas.py           <span class="cm"># Pydantic I/O schémata</span>
+│   │   └── routes/
+│   │       ├── feeds.py         <span class="cm"># CRUD feedy</span>
+│   │       ├── articles.py      <span class="cm"># seznam, vyhledávání článků</span>
+│   │       ├── actions.py       <span class="cm"># /refresh, /ask</span>
+│   │       ├── chat.py          <span class="cm"># SSE chat streaming</span>
+│   │       ├── live.py          <span class="cm"># SSE live broadcast</span>
+│   │       └── terminal.py      <span class="cm"># WebSocket terminál</span>
+│   │
+│   ├── <span class="ap">cli/</span>                  <span class="cm"># příkazová řádka</span>
+│   │   ├── app.py               <span class="cm"># Typer příkazy</span>
+│   │   ├── repl.py              <span class="cm"># interaktivní REPL</span>
+│   │   └── demo.py              <span class="cm"># demo mode se vzorovými daty</span>
+│   │
+│   ├── <span class="ap">web/</span>
+│   │   └── index.html           <span class="cm"># celý web UI v jednom souboru</span>
+│   │
+│   └── <span class="ay">mcp_server.py</span>         <span class="cm"># MCP server pro Claude Code</span>
+│
+├── <span class="ap">docs/</span>                    <span class="cm"># MkDocs dokumentace (EN)</span>
+├── <span class="ap">docs_cs/</span>                 <span class="cm"># tato česká dokumentace</span>
+├── <span class="ap">landing/</span>                 <span class="cm"># GitHub Pages landing page</span>
+├── <span class="ap">tests/</span>                   <span class="cm"># pytest testy</span>
+├── mkdocs.yml
+└── pyproject.toml</div>
+</section>
+
+<!-- DATOVÝ TOK -->
+<section id="datovy-tok">
+  <h2>Datový tok</h2>
+
+  <h3>Refresh pipeline</h3>
+  <p>Spustí se příkazem <code>feedwatch refresh</code> nebo automaticky každou hodinu přes APScheduler.</p>
+  <div class="arch"><span class="ah">RSS XML (vzdálený server)</span>
+      ↓
+<span class="ag">fetcher.py</span> — httpx.AsyncClient.get(url)
+  • feedparser.parse(xml) → Python objekty
+  • dedup: GUID článku už v DB? → přeskoč
+  • nové Article objekty → db.add_all()
+      ↓
+<span class="ag">SQLite</span> (feedwatch.db)
+      ↓
+<span class="ag">analyzer.py</span> — VADER SentimentIntensityAnalyzer
+  • score_text(title + description[:300])
+  • compound: -1.0 až +1.0
+  • label: positive / neutral / negative
+  • article.sentiment_score = score
+      ↓
+<span class="ag">embedder.py</span> — SentenceTransformer("all-MiniLM-L6-v2")
+  • model.encode([article.text_for_embedding])
+  • → vektor 384 čísel
+  • chromadb.Collection.upsert(id, embedding, metadata)
+  • article.embedded = True
+      ↓
+<span class="ag">summarizer.py</span> — Claude API (pokud ANTHROPIC_API_KEY)
+  • client.messages.create(model, system, user=title+desc)
+  • → 1-2 věty shrnutí
+  • article.summary = text</div>
+
+  <h3>Chat flow (bez API klíče)</h3>
+  <div class="arch"><span class="ah">Uživatel napíše zprávu ve webu</span>
+      ↓
+<span class="ag">POST /chat/stream</span>  (FastAPI)
+      ↓
+<span class="ag">_build_context(message, db)</span>
+  • semantic_search(message, n=6) → ChromaDB
+  • SELECT articles WHERE fetched_at > now-24h LIMIT 8
+  • → text s relevantními články
+      ↓
+<span class="ag">claude_session.chat(message, context)</span>
+  • sestaví prompt: kontext + historie + zpráva
+  • subprocess: claude --print --output-format stream-json
+  • první zpráva: nová session, uloží session_id
+  • další zprávy: claude --print --resume={session_id}
+      ↓
+<span class="ag">SSE stream</span> → prohlížeč
+  • event: delta → text se píše živě
+  • event: done  → konec</div>
+</section>
+
+<!-- KONFIGURACE -->
+<section id="konfigurace">
+  <h2>Konfigurace</h2>
+  <p>Nastavení se čtou ze souboru <code>.env</code> nebo přímo z prostředí. Třídu <code>Settings</code> implementuje pydantic-settings.</p>
+  <div class="cb">
+    <div class="cb-head"><span>feedwatch/config.py</span></div>
+    <div class="cb-body"><span class="kw">from</span> pydantic_settings <span class="kw">import</span> BaseSettings
+
+<span class="kw">class</span> <span class="cl">Settings</span>(BaseSettings):
+    database_url: <span class="cl">str</span> = <span class="st">"sqlite+aiosqlite:///feedwatch.db"</span>
+    chroma_path: <span class="cl">str</span> = <span class="st">"./chroma_db"</span>
+    embed_model: <span class="cl">str</span> = <span class="st">"all-MiniLM-L6-v2"</span>
+    anthropic_api_key: <span class="cl">str</span> = <span class="st">""</span>       <span class="cm"># volitelné</span>
+    claude_model: <span class="cl">str</span> = <span class="st">"claude-sonnet-4-6"</span>
+    scheduler_interval_minutes: <span class="cl">int</span> = <span class="nb">60</span>
+    api_host: <span class="cl">str</span> = <span class="st">"0.0.0.0"</span>
+    api_port: <span class="cl">int</span> = <span class="nb">8000</span></div>
+  </div>
+
+  <table>
+    <tr><th>Proměnná</th><th>Výchozí</th><th>Popis</th></tr>
+    <tr><td><code>ANTHROPIC_API_KEY</code></td><td><em>prázdné</em></td><td>Klíč Claude API — volitelný</td></tr>
+    <tr><td><code>CLAUDE_MODEL</code></td><td><code>claude-sonnet-4-6</code></td><td>Model pro agenty</td></tr>
+    <tr><td><code>DATABASE_URL</code></td><td><code>sqlite+aiosqlite:///feedwatch.db</code></td><td>SQLAlchemy URL databáze</td></tr>
+    <tr><td><code>CHROMA_PATH</code></td><td><code>./chroma_db</code></td><td>Cesta k ChromaDB</td></tr>
+    <tr><td><code>EMBED_MODEL</code></td><td><code>all-MiniLM-L6-v2</code></td><td>Embedding model</td></tr>
+    <tr><td><code>SCHEDULER_INTERVAL_MINUTES</code></td><td><code>60</code></td><td>Interval auto-refreshe</td></tr>
+    <tr><td><code>API_PORT</code></td><td><code>8000</code></td><td>Port serveru</td></tr>
+  </table>
+</section>
+
+<!-- FETCHER -->
+<section id="fetcher">
+  <h2>📡 Fetcher — <code>services/fetcher.py</code></h2>
+  <p>Stahuje RSS/Atom feedy asynchronně. Všechny feedy se stahují paralelně pomocí <code>asyncio.gather()</code>.</p>
+
+  <h3>Klíčové funkce</h3>
+  <div class="cb">
+    <div class="cb-head"><span>fetch_all() — paralelní stahování</span></div>
+    <div class="cb-body"><span class="kw">async def</span> <span class="fn">fetch_all</span>(db: AsyncSession) -> dict[str, int]:
+    <span class="cm"># načte všechny aktivní feedy z DB</span>
+    feeds = await db.execute(select(Feed).where(Feed.active == True))
+
+    <span class="cm"># spustí fetch_one() pro každý feed PARALELNĚ</span>
+    counts = await asyncio.gather(*[fetch_one(feed, db) for feed in feeds])
+
+    <span class="cm"># vrátí slovník {název_feedu: počet_nových_článků}</span>
+    return {feed.name: count for feed, count in zip(feeds, counts)}</div>
+  </div>
+
+  <div class="cb">
+    <div class="cb-head"><span>fetch_one() — jeden feed</span></div>
+    <div class="cb-body"><span class="kw">async def</span> <span class="fn">fetch_one</span>(feed: Feed, db: AsyncSession) -> int:
+    <span class="cm"># stáhne XML přes httpx</span>
+    async with httpx.AsyncClient(follow_redirects=True) as client:
+        resp = await client.get(feed.url, timeout=30)
+        parsed = feedparser.parse(resp.text)
+
+    <span class="cm"># načte existující GUIDy (dedup)</span>
+    existing_guids = {row[0] for row in await db.execute(
+        select(Article.guid).where(Article.feed_id == feed.id)
+    )}
+
+    <span class="cm"># pro každý nový článek vytvoří Article objekt</span>
+    new_articles = []
+    for entry in parsed.entries:
+        guid = entry.get("id") or entry.get("link")
+        if guid in existing_guids:
+            continue  <span class="cm"># přeskoč duplikát</span>
+        new_articles.append(Article(
+            feed_id=feed.id,
+            guid=guid,
+            title=entry.get("title", "")[:1000],
+            ...
+        ))</div>
+  </div>
+
+  <div class="callout callout-info">
+    <div class="callout-title">💡 Proč asyncio.gather?</div>
+    50 feedů stažených sekvenčně = 50 × ~1s = 50s čekání. S <code>asyncio.gather()</code> se stahují najednou = ~1s. Viz sekci <a href="#async">Async Python</a>.
+  </div>
+</section>
+
+<!-- ANALYZER -->
+<section id="analyzer">
+  <h2>😊 Analyzer — <code>services/analyzer.py</code></h2>
+  <p>Přiřazuje každému článku sentiment score pomocí VADER (Valence Aware Dictionary and sEntiment Reasoner). Běží lokálně, nepotřebuje internet ani API klíč.</p>
+
+  <div class="cb">
+    <div class="cb-head"><span>score_text() — ohodnocení textu</span></div>
+    <div class="cb-body">_analyzer = SentimentIntensityAnalyzer()
+
+<span class="kw">def</span> <span class="fn">score_text</span>(text: str) -> tuple[float, str]:
+    scores = _analyzer.polarity_scores(text)
+    compound = scores[<span class="st">"compound"</span>]  <span class="cm"># -1.0 až +1.0</span>
+
+    <span class="kw">if</span> compound >= <span class="nb">0.05</span>:
+        label = <span class="st">"positive"</span>
+    <span class="kw">elif</span> compound <= <span class="nb">-0.05</span>:
+        label = <span class="st">"negative"</span>
+    <span class="kw">else</span>:
+        label = <span class="st">"neutral"</span>
+
+    <span class="kw">return</span> compound, label</div>
+  </div>
+
+  <table>
+    <tr><th>Příklad textu</th><th>Score</th><th>Label</th></tr>
+    <tr><td>"Amazing breakthrough! Scientists celebrate huge success."</td><td>+0.82</td><td>positive</td></tr>
+    <tr><td>"Critical vulnerability found, servers compromised."</td><td>-0.74</td><td>negative</td></tr>
+    <tr><td>"The meeting is scheduled for Tuesday at 3pm."</td><td>+0.04</td><td>neutral</td></tr>
+  </table>
+</section>
+
+<!-- EMBEDDER -->
+<section id="embedder">
+  <h2>🧠 Embedder — <code>services/embedder.py</code></h2>
+  <p>Převádí text článku na vektor (384 čísel) a ukládá ho do ChromaDB pro sémantické vyhledávání. Model <code>all-MiniLM-L6-v2</code> běží lokálně (~90 MB).</p>
+
+  <div class="cb">
+    <div class="cb-head"><span>embed_pending() — embedding nových článků</span></div>
+    <div class="cb-body"><span class="kw">async def</span> <span class="fn">embed_pending</span>(db: AsyncSession) -> int:
+    <span class="cm"># najde články bez embeddingu</span>
+    articles = await db.execute(
+        select(Article).where(Article.embedded == False)
+    )
+
+    model = SentenceTransformer(<span class="st">"all-MiniLM-L6-v2"</span>)
+    collection = chromadb.PersistentClient(path=chroma_path)
+                         .get_or_create_collection(<span class="st">"articles"</span>)
+
+    <span class="cm"># batch encoding — všechny najednou</span>
+    texts = [a.text_for_embedding for a in articles]
+    embeddings = model.encode(texts).tolist()  <span class="cm"># shape: (n, 384)</span>
+
+    <span class="cm"># uloží do ChromaDB</span>
+    collection.upsert(
+        ids=[str(a.id) for a in articles],
+        embeddings=embeddings,
+        documents=texts,
+        metadatas=[{<span class="st">"title"</span>: a.title, <span class="st">"url"</span>: a.url, ...}],
+    )</div>
+  </div>
+
+  <div class="cb">
+    <div class="cb-head"><span>semantic_search() — vyhledávání</span></div>
+    <div class="cb-body"><span class="kw">def</span> <span class="fn">semantic_search</span>(query: str, n_results: int = <span class="nb">10</span>) -> list[dict]:
+    <span class="cm"># převede dotaz na vektor</span>
+    query_embedding = model.encode([query]).tolist()
+
+    <span class="cm"># najde n nejbližších vektorů v ChromaDB</span>
+    results = collection.query(
+        query_embeddings=query_embedding,
+        n_results=n_results,
+        include=[<span class="st">"documents"</span>, <span class="st">"metadatas"</span>, <span class="st">"distances"</span>],
+    )
+
+    <span class="cm"># skóre: 1 - distance/2, čím vyšší tím relevantnější</span>
+    return [{<span class="st">"score"</span>: max(0, 1 - dist/<span class="nb">2</span>), ...} for dist in distances]</div>
+  </div>
+
+  <p>Viz sekci <a href="#vektory">Teorie: Vektory</a> pro vysvětlení co to znamená matematicky.</p>
+</section>
+
+<!-- DATABÁZE -->
+<section id="database">
+  <h2>🗄️ Databáze — <code>db/</code> a <code>models/</code></h2>
+
+  <h3>Modely</h3>
+  <table>
+    <tr><th colspan="3">Feed</th></tr>
+    <tr><th>Sloupec</th><th>Typ</th><th>Popis</th></tr>
+    <tr><td><code>id</code></td><td>int PK</td><td>Auto-increment</td></tr>
+    <tr><td><code>url</code></td><td>str unique</td><td>URL RSS feedu</td></tr>
+    <tr><td><code>name</code></td><td>str</td><td>Zobrazovaný název</td></tr>
+    <tr><td><code>category</code></td><td>str</td><td>Kategorie (tech, forum/reddit...)</td></tr>
+    <tr><td><code>active</code></td><td>bool</td><td>Zahrnovat do refreshe</td></tr>
+    <tr><td><code>last_fetched</code></td><td>datetime?</td><td>Čas posledního stažení</td></tr>
+  </table>
+
+  <table>
+    <tr><th colspan="3">Article</th></tr>
+    <tr><th>Sloupec</th><th>Typ</th><th>Popis</th></tr>
+    <tr><td><code>id</code></td><td>int PK</td><td></td></tr>
+    <tr><td><code>feed_id</code></td><td>int FK</td><td>Odkaz na Feed</td></tr>
+    <tr><td><code>guid</code></td><td>str unique</td><td>RSS GUID — klíč pro dedup</td></tr>
+    <tr><td><code>title</code></td><td>str</td><td>Titulek článku</td></tr>
+    <tr><td><code>description</code></td><td>text?</td><td>Popis z RSS</td></tr>
+    <tr><td><code>url</code></td><td>str</td><td>Odkaz na článek</td></tr>
+    <tr><td><code>sentiment_score</code></td><td>float?</td><td>VADER skóre: -1 až +1</td></tr>
+    <tr><td><code>sentiment_label</code></td><td>str?</td><td>positive/neutral/negative</td></tr>
+    <tr><td><code>summary</code></td><td>text?</td><td>Claude shrnutí</td></tr>
+    <tr><td><code>embedded</code></td><td>bool</td><td>Je v ChromaDB?</td></tr>
+  </table>
+
+  <div class="cb">
+    <div class="cb-head"><span>db/database.py — async setup</span></div>
+    <div class="cb-body"><span class="cm"># async engine — nepřestane s dotazy kvůli I/O</span>
+engine = create_async_engine(<span class="st">"sqlite+aiosqlite:///feedwatch.db"</span>)
+AsyncSessionLocal = async_sessionmaker(engine, expire_on_commit=False)
+
+<span class="cm"># dependency pro FastAPI</span>
+<span class="kw">async def</span> <span class="fn">get_db</span>() -> AsyncSession:
+    async with AsyncSessionLocal() as session:
+        yield session  <span class="cm"># automaticky zavře po requestu</span>
+
+<span class="cm"># vytvoří tabulky při prvním spuštění</span>
+<span class="kw">async def</span> <span class="fn">init_db</span>():
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)</div>
+  </div>
+</section>
+
+<!-- AGENTI -->
+<section id="agenti">
+  <h2>🤖 AI agenti — <code>agents/</code></h2>
+  <p>Tři specializovaní agenti, každý pro jiný účel. Všichni používají Claude API.</p>
+</section>
+
+<section id="summarizer">
+  <h3>Summarizer — <code>agents/summarizer.py</code></h3>
+  <p>Přečte titulek + popis článku a napíše 1-2 věty shrnutí. Volá se automaticky po embeddingu.</p>
+  <div class="cb">
+    <div class="cb-head"><span>summarize_article()</span></div>
+    <div class="cb-body">message = await client.messages.create(
+    model=<span class="st">"claude-sonnet-4-6"</span>,
+    max_tokens=<span class="nb">150</span>,
+    system=<span class="st">"Summarize the article in 1-2 sentences. Be factual and concise."</span>,
+    messages=[{<span class="st">"role"</span>: <span class="st">"user"</span>, <span class="st">"content"</span>: f<span class="st">"Title: {title}\nDescription: {desc}"</span>}],
+)
+<span class="kw">return</span> message.content[<span class="nb">0</span>].text</div>
+  </div>
+</section>
+
+<section id="qa-agent">
+  <h3>Q&A Agent — <code>agents/qa_agent.py</code></h3>
+  <p>Odpovídá na otázky o feedwatch databázi. Používá <strong>tool use</strong> — Claude sám rozhodne které nástroje zavolat.</p>
+
+  <h4>Dostupné nástroje</h4>
+  <table>
+    <tr><th>Nástroj</th><th>Co dělá</th><th>Zdroj dat</th></tr>
+    <tr><td><code>semantic_search</code></td><td>Hledá články podle smyslu</td><td>ChromaDB</td></tr>
+    <tr><td><code>get_recent_articles</code></td><td>Nejnovější články za N hodin</td><td>SQLite</td></tr>
+    <tr><td><code>get_feed_stats</code></td><td>Počty článků, sentiment distribuce</td><td>SQLite</td></tr>
+    <tr><td><code>get_articles_by_sentiment</code></td><td>Filtr podle positive/negative/neutral</td><td>SQLite</td></tr>
+  </table>
+
+  <div class="cb">
+    <div class="cb-head"><span>agentic loop — tool use pattern</span></div>
+    <div class="cb-body"><span class="kw">while</span> True:
+    response = await client.messages.create(
+        model=model, tools=TOOLS, messages=messages
+    )
+
+    <span class="kw">if</span> response.stop_reason == <span class="st">"end_turn"</span>:
+        <span class="kw">return</span> response.content[<span class="nb">0</span>].text  <span class="cm"># finální odpověď</span>
+
+    <span class="kw">if</span> response.stop_reason == <span class="st">"tool_use"</span>:
+        <span class="cm"># Claude chce zavolat nástroj</span>
+        messages.append({<span class="st">"role"</span>: <span class="st">"assistant"</span>, <span class="st">"content"</span>: response.content})
+        tool_results = []
+        <span class="kw">for</span> block in response.content:
+            <span class="kw">if</span> block.type == <span class="st">"tool_use"</span>:
+                result = await _run_tool(block.name, block.input, db)
+                tool_results.append({<span class="st">"type"</span>: <span class="st">"tool_result"</span>, ...})
+        <span class="cm"># pošle výsledky nástrojů zpět Claude</span>
+        messages.append({<span class="st">"role"</span>: <span class="st">"user"</span>, <span class="st">"content"</span>: tool_results})</div>
+  </div>
+</section>
+
+<section id="forum-agent">
+  <h3>Forum Agent — <code>agents/forum_agent.py</code></h3>
+  <p>Specializovaný agent pro analýzu rodičovských diskuzí o autismu. Hledá vzory, opakující se témata, praktické rady z komunity.</p>
+  <div class="callout callout-tip">
+    <div class="callout-title">🎯 System prompt</div>
+    Agent má speciální systémový prompt: <em>"You are a specialist analyst for autism/ASD parent communities. Find recurring themes, practical tips, discussions about PECS/VOKS/AAC..."</em> Reaguje na jazyk uživatele (česky/anglicky).
+  </div>
+</section>
+
+<section id="claude-session">
+  <h3>Claude Session — <code>services/claude_session.py</code></h3>
+  <p>Persistentní claude CLI session — umožňuje chat bez API klíče přes Claude subscription. Používá <code>--resume</code> flag pro zachování kontextu.</p>
+
+  <div class="cb">
+    <div class="cb-head"><span>Jak funguje --resume</span></div>
+    <div class="cb-body"><span class="cm"># 1. zpráva: nová session</span>
+subprocess: claude --print --output-format stream-json --verbose
+→ odpověď → session_id = "abc123" (uloží se)
+
+<span class="cm"># 2. zpráva: pokračuje v konverzaci</span>
+subprocess: claude --print --resume=abc123 --output-format stream-json
+→ Claude pamatuje předchozí kontext
+→ rychlejší (cache)
+
+<span class="cm"># reset session</span>
+POST /chat/reset → session_id = None → příští zpráva začne znovu</div>
+  </div>
+
+  <table>
+    <tr><th>Bez --resume</th><th>S --resume</th></tr>
+    <tr><td>Každá zpráva = nový kontext</td><td>Claude pamatuje historii</td></tr>
+    <tr><td>Cold start ~2-3s vždy</td><td>Cold start jen první zpráva</td></tr>
+    <tr><td>Žádná cache výhoda</td><td>Prompt cache šetří tokeny</td></tr>
+  </table>
+</section>
+
+<!-- REST API -->
+<section id="api">
+  <h2>🌐 REST API — <code>api/</code></h2>
+  <p>FastAPI server s automaticky generovanou OpenAPI dokumentací na <code>/docs</code>.</p>
+
+  <table>
+    <tr><th>Metoda</th><th>Endpoint</th><th>Popis</th></tr>
+    <tr><td><code>GET</code></td><td><code>/</code></td><td>Web UI (index.html)</td></tr>
+    <tr><td><code>GET</code></td><td><code>/feeds/</code></td><td>Seznam feedů</td></tr>
+    <tr><td><code>POST</code></td><td><code>/feeds/</code></td><td>Přidat feed</td></tr>
+    <tr><td><code>DELETE</code></td><td><code>/feeds/{id}</code></td><td>Odstranit feed</td></tr>
+    <tr><td><code>GET</code></td><td><code>/articles/</code></td><td>Články (filtr: feed, sentiment, limit)</td></tr>
+    <tr><td><code>GET</code></td><td><code>/articles/search?q=</code></td><td>Sémantické vyhledávání</td></tr>
+    <tr><td><code>POST</code></td><td><code>/refresh</code></td><td>Spustí celý pipeline</td></tr>
+    <tr><td><code>POST</code></td><td><code>/ask</code></td><td>Q&A agent</td></tr>
+    <tr><td><code>POST</code></td><td><code>/chat/stream</code></td><td>SSE chat streaming</td></tr>
+    <tr><td><code>POST</code></td><td><code>/chat/reset</code></td><td>Reset claude session</td></tr>
+    <tr><td><code>GET</code></td><td><code>/live</code></td><td>SSE live eventy</td></tr>
+    <tr><td><code>WS</code></td><td><code>/ws/terminal</code></td><td>WebSocket CLI terminál</td></tr>
+    <tr><td><code>GET</code></td><td><code>/health</code></td><td>Status serveru</td></tr>
+    <tr><td><code>GET</code></td><td><code>/docs</code></td><td>Swagger UI</td></tr>
+  </table>
+</section>
+
+<!-- LIVE SSE -->
+<section id="live">
+  <h2>📡 Live SSE — <code>routes/live.py</code></h2>
+  <p>Server-Sent Events endpoint. Prohlížeč se připojí a dostává real-time updaty bez pollingu.</p>
+
+  <div class="cb">
+    <div class="cb-head"><span>broadcast() — rozeslání eventu všem klientům</span></div>
+    <div class="cb-body">_subscribers: list[asyncio.Queue] = []
+
+<span class="kw">def</span> <span class="fn">broadcast</span>(event: str, data: dict) -> None:
+    msg = f<span class="st">"event: {event}\ndata: {json.dumps(data)}\n\n"</span>
+    <span class="kw">for</span> queue in _subscribers:
+        queue.put_nowait(msg)  <span class="cm"># neblokuje</span></div>
+  </div>
+
+  <table>
+    <tr><th>Event</th><th>Kdy se pošle</th><th>Data</th></tr>
+    <tr><td><code>status</code></td><td>Průběh refreshe</td><td><code>{msg: "🔄 Fetching..."}</code></td></tr>
+    <tr><td><code>refresh_done</code></td><td>Refresh dokončen</td><td><code>{total, analyzed, embedded}</code></td></tr>
+    <tr><td><code>feed_added</code></td><td>Přidán nový feed</td><td><code>{name, url}</code></td></tr>
+    <tr><td><code>connected</code></td><td>Klient se připojil</td><td><code>{}</code></td></tr>
+  </table>
+
+  <p>Prohlížeč automaticky aktualizuje články a sidebar bez nutnosti F5.</p>
+</section>
+
+<!-- TERMINAL WS -->
+<section id="terminal-ws">
+  <h2>🖥️ Terminal WebSocket — <code>routes/terminal.py</code></h2>
+  <p>WebSocket endpoint na <code>/ws/terminal</code>. Umožňuje spouštět feedwatch příkazy přímo z prohlížeče.</p>
+
+  <div class="cb">
+    <div class="cb-head"><span>Tok zpráv</span></div>
+    <div class="cb-body">Prohlížeč:  "refresh"  →  WebSocket → server
+Server:  spustí cmd_refresh(db)
+Server:  výsledek (Rich tabulky jako text) → WebSocket → prohlížeč
+Prohlížeč: zobrazí výstup v Terminal tabu</div>
+  </div>
+
+  <p>Příkazy: <code>refresh</code>, <code>feeds</code>, <code>list</code>, <code>top</code>, <code>search</code>, <code>add</code>, <code>stats</code>, <code>websearch</code>, <code>webnews</code>, <code>findfeed</code>, <code>ask</code>, <code>forums</code>, <code>help</code></p>
+</section>
+
+<!-- CHAT ENDPOINT -->
+<section id="chat-endpoint">
+  <h2>💬 Chat endpoint — <code>routes/chat.py</code></h2>
+  <p>SSE streaming chat. Rozhoduje jak odpovědět podle dostupnosti API klíče a claude CLI.</p>
+
+  <div class="arch"><span class="ah">POST /chat/stream</span>
+      ↓
+<span class="ag">je nastaven ANTHROPIC_API_KEY?</span>
+  ├── ANO → <span class="ag">_stream_chat()</span> → Claude API přímo (streaming)
+  └── NE  → <span class="ag">je dostupný claude CLI?</span>
+              ├── ANO → <span class="ag">_stream_via_claude_cli()</span>
+              │          1. _build_context() → DB dotazy
+              │          2. claude_session.chat() → subprocess
+              │          3. SSE stream → prohlížeč
+              └── NE  → <span class="ag">_no_key_response()</span>
+                         jednoduché DB dotazy
+                         (positive/negative/recent/stats)</div>
+</section>
+
+<!-- CLI -->
+<section id="cli">
+  <h2>💻 CLI — <code>cli/app.py</code></h2>
+  <p>Typer + Rich. Všechny příkazy jsou dostupné přes <code>feedwatch &lt;příkaz&gt;</code>.</p>
+
+  <table>
+    <tr><th>Příkaz</th><th>Popis</th></tr>
+    <tr><td><code>feedwatch add &lt;url&gt; --name &lt;n&gt;</code></td><td>Přidat RSS feed</td></tr>
+    <tr><td><code>feedwatch remove &lt;id&gt;</code></td><td>Odstranit feed</td></tr>
+    <tr><td><code>feedwatch feeds</code></td><td>Seznam feedů (Rich tabulka)</td></tr>
+    <tr><td><code>feedwatch refresh</code></td><td>Fetch → analyze → embed → summarize</td></tr>
+    <tr><td><code>feedwatch list [--hours] [--sentiment]</code></td><td>Procházet články</td></tr>
+    <tr><td><code>feedwatch top [--hours] [--num]</code></td><td>Top positive / negative</td></tr>
+    <tr><td><code>feedwatch search &lt;dotaz&gt;</code></td><td>Sémantické vyhledávání</td></tr>
+    <tr><td><code>feedwatch ask &lt;otázka&gt;</code></td><td>Q&A agent (potřebuje API klíč)</td></tr>
+    <tr><td><code>feedwatch forums &lt;otázka&gt;</code></td><td>Forum digest agent</td></tr>
+    <tr><td><code>feedwatch autism</code></td><td>Přidat preset PAS/autism feedy</td></tr>
+    <tr><td><code>feedwatch demo</code></td><td>Demo se vzorovými daty</td></tr>
+    <tr><td><code>feedwatch start [--api-key]</code></td><td>Server + REPL paralelně</td></tr>
+    <tr><td><code>feedwatch serve [--api-key]</code></td><td>Jen server</td></tr>
+    <tr><td><code>feedwatch mcp</code></td><td>MCP server (stdio)</td></tr>
+  </table>
+</section>
+
+<!-- REPL -->
+<section id="repl">
+  <h2>⌨️ REPL — <code>cli/repl.py</code></h2>
+  <p>Interaktivní příkazová řádka která běží paralelně s web serverem. Server jede v background threadu.</p>
+
+  <div class="cb">
+    <div class="cb-head"><span>Architektura REPL + server</span></div>
+    <div class="cb-body">feedwatch start
+  ↓
+ServerThread(daemon=True).start()   <span class="cm"># server na pozadí</span>
+  ↓
+čekání až server nastartuje (httpx health check)
+  ↓
+<span class="kw">while</span> self._running:
+    line = await loop.run_in_executor(None, input)  <span class="cm"># čte stdin async</span>
+    await self._dispatch(line)                      <span class="cm"># vykoná příkaz</span></div>
+  </div>
+
+  <p>Příkazy REPLu: vše jako CLI + <code>websearch</code>, <code>webnews</code>, <code>findfeed</code> (DuckDuckGo), <code>ask</code>, <code>forums</code>.</p>
+</section>
+
+<!-- WEB UI -->
+<section id="web-ui">
+  <h2>🎨 Web UI — <code>web/index.html</code></h2>
+  <p>Celý dashboard v jednom HTML souboru — žádný build step, žádný npm, žádný framework. Čistý HTML + CSS + vanilla JavaScript.</p>
+
+  <h4>Tři taby</h4>
+  <table>
+    <tr><th>Tab</th><th>Technologie</th><th>Jak komunikuje se serverem</th></tr>
+    <tr><td>📰 News</td><td>fetch() API</td><td>REST API: <code>GET /articles/</code>, <code>GET /feeds/</code></td></tr>
+    <tr><td>💬 Chat AI</td><td>fetch() + EventSource</td><td>SSE: <code>POST /chat/stream</code></td></tr>
+    <tr><td>🖥️ Terminal</td><td>WebSocket API</td><td>WS: <code>/ws/terminal</code></td></tr>
+  </table>
+
+  <h4>Live SSE napojení</h4>
+  <div class="cb">
+    <div class="cb-head"><span>connectLive() — připojení k /live</span></div>
+    <div class="cb-body"><span class="kw">function</span> <span class="fn">connectLive</span>() {
+  <span class="kw">const</span> es = <span class="kw">new</span> EventSource(<span class="st">'/live'</span>);
+
+  es.addEventListener(<span class="st">'refresh_done'</span>, e => {
+    <span class="kw">const</span> d = JSON.parse(e.data);
+    showToast(<span class="st">`✓ ${d.total} new articles`</span>);
+    loadArticles();  <span class="cm">// automaticky obnoví seznam</span>
+  });
+
+  es.onerror = () => {
+    setTimeout(connectLive, <span class="nb">3000</span>);  <span class="cm">// auto-reconnect</span>
+  };
+}</span></div>
+  </div>
+</section>
+
+<!-- MCP -->
+<section id="mcp">
+  <h2>🔌 MCP Server — <code>mcp_server.py</code></h2>
+  <p>Model Context Protocol server — zpřístupní feedwatch jako nástroje v Claude Code a jiných MCP klientech.</p>
+
+  <div class="callout callout-tip">
+    <div class="callout-title">📋 Nastavení</div>
+    <code>claude mcp add -s user feedwatch -- uv run feedwatch-mcp</code><br>
+    Poté v jakémkoliv Claude Code chatu máš k dispozici feedwatch nástroje automaticky.
+  </div>
+
+  <table>
+    <tr><th>MCP nástroj</th><th>Popis</th></tr>
+    <tr><td><code>fw_search</code></td><td>Sémantické vyhledávání v článcích</td></tr>
+    <tr><td><code>fw_recent</code></td><td>Nejnovější články (filtr sentimentu)</td></tr>
+    <tr><td><code>fw_ask</code></td><td>Q&A agent</td></tr>
+    <tr><td><code>fw_forums</code></td><td>Forum digest agent</td></tr>
+    <tr><td><code>fw_feeds</code></td><td>Seznam feedů</td></tr>
+    <tr><td><code>fw_stats</code></td><td>Statistiky databáze</td></tr>
+    <tr><td><code>fw_refresh</code></td><td>Spustí refresh pipeline</td></tr>
+    <tr><td><code>fw_top</code></td><td>Top positive/negative články</td></tr>
+  </table>
+</section>
+
+<!-- SCRAPER -->
+<section id="scraper">
+  <h2>🕷️ Scraper — <code>services/scraper.py</code></h2>
+  <p>Stahuje obsah z fór a diskuzí bez RSS feedu. Podporuje Reddit (přes RSS) a obecný HTML scraper (BeautifulSoup).</p>
+
+  <h4>Reddit feedy (přidané přes <code>feedwatch autism</code>)</h4>
+  <ul>
+    <li><code>r/autism</code> — obecná komunita</li>
+    <li><code>r/autismparents</code> — rodiče</li>
+    <li><code>r/autisminwomen</code></li>
+    <li><code>r/aspergers</code></li>
+    <li><code>r/specialed</code> — speciální vzdělávání</li>
+    <li><code>r/autism</code> + search PECS/AAC/VOKS</li>
+  </ul>
+
+  <div class="callout callout-warn">
+    <div class="callout-title">⚠️ Rate limiting</div>
+    Reddit omezuje počet requestů. RSS feedy jsou bezpečnější než přímé scraping. Při použití HTML scraperu dodržuj minimálně 1-2s zpoždění.
+  </div>
+</section>
+
+<!-- TEORIE: VEKTORY -->
+<section id="vektory">
+  <h2>Teorie: Vektorové embeddingy</h2>
+  <p>Embedding je seznam čísel reprezentující <em>smysl</em> textu. Podobné texty produkují podobné vektory.</p>
+
+  <div class="cb">
+    <div class="cb-body"><span class="cm"># "Python performance" → vektor</span>
+[0.12, -0.34, 0.87, 0.02, ...]  <span class="cm"># 384 čísel</span>
+
+<span class="cm"># "fast Python code" → podobný vektor</span>
+[0.11, -0.31, 0.89, 0.04, ...]  <span class="cm"># blízko → relevantní výsledek</span>
+
+<span class="cm"># "Brazilian football" → vzdálený vektor</span>
+[-0.45, 0.72, -0.23, 0.61, ...] <span class="cm"># daleko → irelevantní</span></div>
+  </div>
+
+  <p>Model <code>all-MiniLM-L6-v2</code> byl trénován na stovkách milionů větí. Naučil se co slova znamenají z kontextu — proto funguje sémantické vyhledávání i bez shody klíčových slov.</p>
+
+  <p><strong>Cosine vzdálenost</strong> — jak moc jsou dva vektory "podobné". 0 = identické, 2 = opačné. feedwatch přepočítá na skóre 0-1 (1 = nejrelevantnější).</p>
+</section>
+
+<!-- TEORIE: SENTIMENT -->
+<section id="sentiment">
+  <h2>Teorie: Sentiment analýza (VADER)</h2>
+  <p>VADER (Valence Aware Dictionary and sEntiment Reasoner) používá slovník slov s emočními hodnotami + pravidla pro:</p>
+  <ul>
+    <li><strong>Negaci</strong> — "not good" ≠ "good"</li>
+    <li><strong>Interpunkci</strong> — "great!!!" > "great"</li>
+    <li><strong>Velká písmena</strong> — "AMAZING" > "amazing"</li>
+    <li><strong>Zesilovače</strong> — "very good" > "good"</li>
+  </ul>
+
+  <p>Výsledkem je <code>compound</code> score: číslo od -1.0 do +1.0. feedwatch klasifikuje:</p>
+  <ul>
+    <li><code>≥ +0.05</code> → <strong style="color:var(--green)">positive</strong></li>
+    <li><code>≤ -0.05</code> → <strong style="color:var(--red)">negative</strong></li>
+    <li>ostatní → <strong style="color:var(--yellow)">neutral</strong></li>
+  </ul>
+
+  <div class="callout callout-warn">
+    <div class="callout-title">⚠️ Omezení</div>
+    VADER je optimalizovaný pro angličtinu a krátké texty (sociální média, zprávy). Pro česky psaný obsah může být méně přesný. Pro vícejazyčný sentiment by bylo lepší použít <code>XLM-RoBERTa</code>.
+  </div>
+</section>
+
+<!-- TEORIE: TOOL USE -->
+<section id="tool-use">
+  <h2>Teorie: Tool use (function calling)</h2>
+  <p>Tool use umožňuje Claudovi <em>rozhodnout</em> co udělat místo pouhého generování textu. Ty definuješ nástroje jako JSON schémata, Claude vybere které zavolat a s jakými argumenty.</p>
+
+  <div class="cb">
+    <div class="cb-body"><span class="cm"># Ty definuješ nástroje:</span>
+tools = [{
+    <span class="st">"name"</span>: <span class="st">"semantic_search"</span>,
+    <span class="st">"description"</span>: <span class="st">"Search articles by meaning"</span>,
+    <span class="st">"input_schema"</span>: {<span class="st">"query"</span>: <span class="st">"string"</span>}
+}]
+
+<span class="cm"># Uživatel se ptá: "Jaké jsou novinky v AI?"</span>
+
+<span class="cm"># Claude SÁM rozhodne:</span>
+<span class="st">"tool_use"</span>: semantic_search(query=<span class="st">"AI news"</span>)
+
+<span class="cm"># Tvůj kód zavolá ChromaDB, vrátí výsledky Claudovi</span>
+
+<span class="cm"># Claude sestaví odpověď s citacemi</span></div>
+  </div>
+
+  <p>Celý agentic loop viz <a href="#qa-agent">Q&A Agent</a>.</p>
+</section>
+
+<!-- TEORIE: ASYNC -->
+<section id="async">
+  <h2>Teorie: Async Python</h2>
+  <p><code>asyncio</code> umožňuje jednomu vláknu obsluhovat mnoho úloh najednou přepínáním mezi nimi během čekání na I/O (síť, disk).</p>
+
+  <div class="cb">
+    <div class="cb-body"><span class="cm"># Sekvenční (pomalé) — 50 feedů × 1s = 50s</span>
+<span class="kw">for</span> feed <span class="kw">in</span> feeds:
+    result = await fetch(feed)  <span class="cm"># čeká na každý</span>
+
+<span class="cm"># Paralelní (rychlé) — všechny najednou ≈ 1s</span>
+results = await asyncio.gather(
+    *[fetch(feed) <span class="kw">for</span> feed <span class="kw">in</span> feeds]
+)</div>
+  </div>
+
+  <p>feedwatch je plně async od HTTP vrstvy po databázi:</p>
+  <ul>
+    <li><code>httpx.AsyncClient</code> — async HTTP</li>
+    <li><code>aiosqlite</code> + <code>sqlalchemy[asyncio]</code> — async SQLite</li>
+    <li><code>FastAPI</code> — nativně async server</li>
+    <li><code>anthropic.AsyncAnthropic</code> — async Claude API</li>
+  </ul>
+
+  <div class="callout callout-info">
+    <div class="callout-title">💡 CLI výjimka</div>
+    CLI používá <code>asyncio.run()</code> jako přechod sync→async protože terminál je jednovláknový. FastAPI server toto nepotřebuje — je celý async od začátku.
+  </div>
+</section>
+
+</main>
+</div>
+
+<script>
+// highlight active nav link on scroll
+const sections = document.querySelectorAll('section[id]');
+const navLinks = document.querySelectorAll('.nav-link');
+
+const observer = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      navLinks.forEach(l => l.classList.remove('active'));
+      const active = document.querySelector(`.nav-link[href="#${e.target.id}"]`);
+      if (active) active.classList.add('active');
+    }
+  });
+}, {threshold: 0.3, rootMargin: '-60px 0px -40% 0px'});
+
+sections.forEach(s => observer.observe(s));
+</script>
+</body>
+</html>

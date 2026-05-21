@@ -10,6 +10,7 @@ from feedwatch.services.scheduler import get_scheduler
 from feedwatch.api.routes import feeds_router, articles_router, actions_router, chat_router, live_router, terminal_router
 
 WEB_DIR = Path(__file__).parent.parent / "web"
+DOCS_CS_DIR = Path(__file__).parent.parent.parent / "docs_cs"
 
 
 @asynccontextmanager
@@ -44,6 +45,11 @@ async def health():
 @app.get("/")
 async def root():
     return FileResponse(WEB_DIR / "index.html")
+
+
+@app.get("/docs-cs")
+async def docs_cs():
+    return FileResponse(DOCS_CS_DIR / "index.html")
 
 
 if WEB_DIR.exists():
