@@ -22,10 +22,13 @@ async def lifespan(app: FastAPI):
     scheduler = get_scheduler()
     scheduler.start()
 
-    # předehřeje claude session na pozadí
+    # předehřeje claude session s malým zpožděním — server startuje hned
     warmup_task = None
     if has_claude():
-        warmup_task = asyncio.create_task(warmup())
+        async def _delayed_warmup():
+            await asyncio.sleep(2)  # počkej na plný start
+            await warmup()
+        warmup_task = asyncio.create_task(_delayed_warmup())
 
     try:
         yield

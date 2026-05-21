@@ -15,7 +15,16 @@ _chroma: chromadb.Collection | None = None
 def _get_model() -> SentenceTransformer:
     global _model
     if _model is None:
-        _model = SentenceTransformer(settings.embed_model)
+        import os, sys
+        # potlač progress bar sentence-transformers
+        os.environ.setdefault("TOKENIZERS_PARALLELISM", "false")
+        old_stderr = sys.stderr
+        sys.stderr = open(os.devnull, "w")
+        try:
+            _model = SentenceTransformer(settings.embed_model)
+        finally:
+            sys.stderr.close()
+            sys.stderr = old_stderr
     return _model
 
 
