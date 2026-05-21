@@ -501,8 +501,11 @@ def serve(
     api_key: str = typer.Option("", "--api-key", "-k", help="Anthropic API key"),
 ):
     """Start the FastAPI server."""
-    import os, uvicorn
+    import os, sys, uvicorn, logging
     from feedwatch.config import settings
+
+    # potlač chybové výpisy při normálním ukončení
+    logging.getLogger("uvicorn.error").setLevel(logging.CRITICAL)
 
     key = api_key or os.environ.get("ANTHROPIC_API_KEY", "")
     if key:
@@ -511,13 +514,22 @@ def serve(
         console.print("[green]✓[/green] API key set")
 
     console.print(Panel(
-        f"[bold green]feedwatch API[/bold green]\n"
-        f"http://{settings.api_host}:{settings.api_port}/docs",
+        f"[bold green]feedwatch[/bold green]  běží na  "
+        f"[cyan]http://{settings.api_host}:{settings.api_port}[/cyan]\n"
+        f"[dim]Ctrl+C pro ukončení[/dim]",
         border_style="green",
     ))
-    uvicorn.run(
-        "feedwatch.api.main:app",
-        host=settings.api_host,
-        port=settings.api_port,
-        reload=False,
-    )
+
+    try:
+        uvicorn.run(
+            "feedwatch.api.main:app",
+            host=settings.api_host,
+            port=settings.api_port,
+            reload=False,
+            log_level="warning",      # méně logu
+            access_log=True,
+        )
+    except KeyboardInterrupt:
+        pass  # čistý exit bez traceback
+    finally:
+        console.print("\n[dim]feedwatch zastaven.[/dim]")

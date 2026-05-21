@@ -15,18 +15,32 @@ DOCS_CS_DIR = Path(__file__).parent.parent.parent / "docs_cs"
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    import asyncio
+    from feedwatch.services.claude_session import warmup, has_claude
+
     await init_db()
     scheduler = get_scheduler()
     scheduler.start()
 
-    # předehřeje claude session na pozadí — chat bude hned připravený
-    import asyncio
-    from feedwatch.services.claude_session import warmup, has_claude
+    # předehřeje claude session na pozadí
+    warmup_task = None
     if has_claude():
-        asyncio.create_task(warmup())
+        warmup_task = asyncio.create_task(warmup())
 
-    yield
-    scheduler.shutdown()
+    try:
+        yield
+    finally:
+        # čistý shutdown
+        if warmup_task and not warmup_task.done():
+            warmup_task.cancel()
+            try:
+                await warmup_task
+            except (asyncio.CancelledError, Exception):
+                pass
+        try:
+            scheduler.shutdown(wait=False)
+        except Exception:
+            pass
 
 
 app = FastAPI(
