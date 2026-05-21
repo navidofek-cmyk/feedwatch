@@ -1,20 +1,19 @@
 """
-Persistentní claude CLI session — spustí se jednou při startu serveru,
-přijímá zprávy přes asyncio queue, vrací odpovědi.
-Používá claude --resume pro zachování kontextu mezi zprávami.
+Claude CLI session — volá claude --print pro každou zprávu.
+Historie konverzace se předává jako text v promptu.
 """
 import asyncio
 import json
 import shutil
 from typing import AsyncGenerator
 
-_session_id: str | None = None
-_lock = asyncio.Lock()
 _claude_bin: str | None = shutil.which("claude")
+_lock = asyncio.Lock()
+_is_ready: bool = False
 
 
-async def _run_claude(prompt: str, resume_id: str | None = None) -> AsyncGenerator[str, None]:
-    """Spustí claude --print a streamuje text odpovědi."""
+async def _call_claude(prompt: str) -> AsyncGenerator[str, None]:
+    """Spustí claude --print a vrátí text odpovědi."""
     if not _claude_bin:
         yield "claude CLI not found."
         return
@@ -24,11 +23,8 @@ async def _run_claude(prompt: str, resume_id: str | None = None) -> AsyncGenerat
         "--print",
         "--output-format", "stream-json",
         "--verbose",
+        "--no-session-persistence",
     ]
-    if resume_id:
-        cmd += ["--resume", resume_id]   # dva oddělené argumenty
-    else:
-        cmd += ["--no-session-persistence"]
 
     proc = await asyncio.create_subprocess_exec(
         *cmd,
@@ -41,9 +37,6 @@ async def _run_claude(prompt: str, resume_id: str | None = None) -> AsyncGenerat
     await proc.stdin.drain()
     proc.stdin.close()
 
-    session_id_found = None
-
-    # čte celý výstup najednou — bezpečnější než po chunkcích
     output = await proc.stdout.read()
     await proc.wait()
 
@@ -53,72 +46,63 @@ async def _run_claude(prompt: str, resume_id: str | None = None) -> AsyncGenerat
             continue
         try:
             obj = json.loads(line)
-            t = obj.get("type", "")
-
-            if t == "assistant":
+            if obj.get("type") == "assistant":
                 for block in obj.get("message", {}).get("content", []):
                     if block.get("type") == "text" and block.get("text"):
                         yield block["text"]
-
-            elif t in ("result", "system"):
-                sid = obj.get("session_id")
-                if sid:
-                    session_id_found = sid
-
         except Exception:
             pass
 
-    if session_id_found:
-        global _session_id
-        _session_id = session_id_found
 
-
-async def chat(message: str, context: str = "") -> AsyncGenerator[str, None]:
+async def chat(message: str, context: str = "", history: list[dict] | None = None) -> AsyncGenerator[str, None]:
     """
-    Hlavní funkce — pošle zprávu do claude CLI.
-    Při první zprávě vytvoří novou session.
-    Při dalších zprávách pokračuje ve stejné session (--resume).
-    Serialized přes asyncio.Lock — jedna zpráva najednou.
+    Pošle zprávu do claude CLI.
+    Historie a kontext jsou součástí promptu.
     """
-    global _session_id
-
     async with _lock:
-        if context:
-            full_prompt = f"{context}\n\nUser: {message}"
-        else:
-            full_prompt = message
+        parts = []
 
-        async for text in _run_claude(full_prompt, resume_id=_session_id):
+        # systémový kontext
+        parts.append(
+            "You are feedwatch news assistant. "
+            "Answer based on the provided database context. "
+            "Be concise. Cite sources with URLs. "
+            "Respond in the same language the user writes in.\n"
+        )
+
+        # feedwatch DB kontext
+        if context:
+            parts.append(context)
+
+        # historie konverzace (posledních 4 výměn)
+        if history:
+            parts.append("\nConversation history:")
+            for msg in history[-8:]:
+                role = "User" if msg["role"] == "user" else "Assistant"
+                content = str(msg.get("content", ""))[:500]
+                parts.append(f"{role}: {content}")
+
+        # aktuální zpráva
+        parts.append(f"\nUser: {message}")
+        parts.append("\nAssistant:")
+
+        full_prompt = "\n".join(parts)
+
+        async for text in _call_claude(full_prompt):
             yield text
 
 
 async def warmup():
-    """
-    Předehřeje claude session při startu serveru.
-    Spustí claude s krátkým systémovým promptem → uloží session_id.
-    Všechny následující dotazy pak použijí --resume (rychlejší, cache).
-    """
-    if not _claude_bin:
-        return
-    global _session_id
-    if _session_id:
-        return  # už zahřátá
-
-    system_prompt = (
-        "You are feedwatch assistant — you help users explore their RSS feeds, "
-        "news articles, and autism/education community discussions. "
-        "Be concise and always cite sources with URLs. "
-        "Respond in the same language the user writes in. Ready."
-    )
-    # spustí claude, vytvoří session, uloží session_id
-    async for _ in _run_claude(system_prompt):
-        pass  # odpověď nepotřebujeme, jen session_id
+    """Předehřeje claude — spustí krátký test dotaz."""
+    global _is_ready
+    async for _ in _call_claude("Reply with just: ready"):
+        pass
+    _is_ready = True
 
 
 def reset_session():
-    """Resetuje session — příští zpráva začne novou konverzaci."""
-    global _session_id
-    _session_id = None
+    global _is_ready
+    _is_ready = False
 
 
 def has_claude() -> bool:
@@ -126,5 +110,4 @@ def has_claude() -> bool:
 
 
 def session_ready() -> bool:
-    """Vrátí True pokud je session předehřátá."""
-    return _session_id is not None
+    return _is_ready

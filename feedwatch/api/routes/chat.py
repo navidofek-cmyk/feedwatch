@@ -346,13 +346,11 @@ async def _stream_chat(message: str, history: list[dict], db: AsyncSession):
         from feedwatch.services.claude_session import chat as claude_chat, has_claude
 
         if has_claude():
-            # fetch DB context
             yield _sse("tool_start", {"name": "fetching_context", "id": "ctx"})
             context = await _build_context(message, db)
             yield _sse("tool_result", {"name": "fetching_context", "result": "done"})
 
-            # stream via persistent claude session
-            async for text in claude_chat(message, context=context):
+            async for text in claude_chat(message, context=context, history=history):
                 yield _sse("delta", {"text": text})
             yield _sse("done", {})
             return
