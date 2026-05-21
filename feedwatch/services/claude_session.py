@@ -46,38 +46,32 @@ async def _run_claude(prompt: str, resume_id: str | None = None) -> AsyncGenerat
     proc.stdin.close()
 
     session_id_found = None
-    buffer = b""
 
-    while True:
-        chunk = await proc.stdout.read(512)
-        if not chunk:
-            break
-        buffer += chunk
-        while b"\n" in buffer:
-            line, buffer = buffer.split(b"\n", 1)
-            line = line.strip()
-            if not line:
-                continue
-            try:
-                obj = json.loads(line)
-                t = obj.get("type", "")
-
-                if t == "assistant":
-                    for block in obj.get("message", {}).get("content", []):
-                        if block.get("type") == "text" and block.get("text"):
-                            yield block["text"]
-
-                elif t == "result":
-                    sid = obj.get("session_id")
-                    if sid:
-                        session_id_found = sid
-
-            except Exception:
-                pass
-
+    # čte celý výstup najednou — bezpečnější než po chunkcích
+    output = await proc.stdout.read()
     await proc.wait()
 
-    # uloží session ID pro příští zprávu
+    for line in output.split(b"\n"):
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            obj = json.loads(line)
+            t = obj.get("type", "")
+
+            if t == "assistant":
+                for block in obj.get("message", {}).get("content", []):
+                    if block.get("type") == "text" and block.get("text"):
+                        yield block["text"]
+
+            elif t in ("result", "system"):
+                sid = obj.get("session_id")
+                if sid:
+                    session_id_found = sid
+
+        except Exception:
+            pass
+
     if session_id_found:
         global _session_id
         _session_id = session_id_found
