@@ -16,8 +16,11 @@ def _get_model() -> SentenceTransformer:
     global _model
     if _model is None:
         import os, sys
-        # potlač progress bar sentence-transformers
+        # model z lokální cache — žádný request na HuggingFace
+        os.environ.setdefault("HF_HUB_OFFLINE", "1")
+        os.environ.setdefault("TRANSFORMERS_OFFLINE", "1")
         os.environ.setdefault("TOKENIZERS_PARALLELISM", "false")
+        # potlač progress bar
         old_stderr = sys.stderr
         sys.stderr = open(os.devnull, "w")
         try:
