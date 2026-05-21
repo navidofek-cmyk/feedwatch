@@ -822,9 +822,6 @@ async function checkChatStatus() {
   } catch(e) {}
 }
 
-// po přepnutí na chat tab zkontroluj status
-const origSwitchPage = window.switchPage;
-
 connectLive();
 connectTerminal();
 checkChatStatus();
