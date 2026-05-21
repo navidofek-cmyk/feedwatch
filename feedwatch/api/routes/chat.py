@@ -146,9 +146,98 @@ async def _run_tool(name: str, inputs: dict, db: AsyncSession) -> str:
     return f"Unknown tool: {name}"
 
 
+_SIMPLE_PATTERNS = {
+    "positive": ("positive", "nejlepší", "best", "good", "happy"),
+    "negative": ("negative", "nejhorší", "worst", "bad", "sad", "crisis"),
+    "recent":   ("recent", "latest", "new", "today", "dnes", "nové", "nejnovější"),
+    "search":   (),
+}
+
+async def _no_key_response(message: str, db: AsyncSession):
+    """Odpověď bez API klíče — jednoduché dotazy přímo z DB."""
+    from sqlalchemy import select
+    from feedwatch.models.article import Article
+    from feedwatch.models.feed import Feed
+    import re
+
+    msg = message.lower()
+
+    # positive / negative news
+    for sentiment in ("positive", "negative"):
+        keywords = {"positive": ("positive","nejlepší","pozitivní","good","happy","best"),
+                    "negative": ("negative","nejhorší","negativní","bad","worst","sad")}
+        if any(k in msg for k in keywords[sentiment]):
+            result = await db.execute(
+                select(Article)
+                .where(Article.sentiment_label == sentiment)
+                .order_by(Article.sentiment_score.desc() if sentiment == "positive"
+                          else Article.sentiment_score.asc())
+                .limit(8)
+            )
+            articles = result.scalars().all()
+            if not articles:
+                yield _sse("delta", {"text": f"Žádné {sentiment} články v databázi. Spusť refresh."})
+            else:
+                label = "🟢 Nejpozitivnější" if sentiment == "positive" else "🔴 Nejnegativnější"
+                yield _sse("delta", {"text": f"**{label} články:**\n\n"})
+                for a in articles:
+                    score = f"{a.sentiment_score:+.2f}" if a.sentiment_score else ""
+                    yield _sse("delta", {"text": f"**{score}** [{a.title}]({a.url})\n"})
+            yield _sse("done", {})
+            return
+
+    # recent / latest
+    if any(k in msg for k in ("recent","latest","new","today","dnes","nové","nejnovější","poslední")):
+        from datetime import datetime, UTC, timedelta
+        since = datetime.now(UTC) - timedelta(hours=24)
+        result = await db.execute(
+            select(Article).where(Article.fetched_at >= since)
+            .order_by(Article.fetched_at.desc()).limit(10)
+        )
+        articles = result.scalars().all()
+        yield _sse("delta", {"text": f"**Nejnovější články (posledních 24h):**\n\n"})
+        for a in articles:
+            emoji = "🟢" if a.sentiment_label == "positive" else "🔴" if a.sentiment_label == "negative" else "⚪"
+            yield _sse("delta", {"text": f"{emoji} [{a.title}]({a.url})\n"})
+        yield _sse("done", {})
+        return
+
+    # stats
+    if any(k in msg for k in ("stats","statistik","how many","kolik","feeds","feedy")):
+        from sqlalchemy import func
+        total = (await db.execute(select(func.count(Article.id)))).scalar()
+        feeds_count = (await db.execute(select(func.count(Feed.id)))).scalar()
+        pos = (await db.execute(select(func.count(Article.id)).where(Article.sentiment_label=="positive"))).scalar()
+        neg = (await db.execute(select(func.count(Article.id)).where(Article.sentiment_label=="negative"))).scalar()
+        yield _sse("delta", {"text":
+            f"**Statistiky feedwatch:**\n\n"
+            f"📡 Feedů: **{feeds_count}**\n"
+            f"📰 Článků celkem: **{total}**\n"
+            f"🟢 Pozitivní: **{pos}**\n"
+            f"🔴 Negativní: **{neg}**\n"
+            f"⚪ Neutrální: **{total-pos-neg}**\n"
+        })
+        yield _sse("done", {})
+        return
+
+    # fallback — no key info + what works
+    yield _sse("delta", {"text":
+        "**Chat AI** potřebuje Anthropic API klíč pro složitější dotazy.\n\n"
+        "**Bez klíče funguje:**\n"
+        "- *\"Show positive news\"* — nejpozitivnější články\n"
+        "- *\"Show negative news\"* — nejnegativnější články\n"
+        "- *\"Latest news\"* nebo *\"Dnes\"* — nejnovější články\n"
+        "- *\"Stats\"* nebo *\"Statistiky\"* — přehled databáze\n\n"
+        "Pro plný AI chat spusť server s klíčem:\n"
+        "```\nfeedwatch serve --api-key sk-ant-...\n```"
+    })
+    yield _sse("done", {})
+
+
 async def _stream_chat(message: str, history: list[dict], db: AsyncSession):
     if not settings.anthropic_api_key:
-        yield _sse("no_key", {})
+        async for chunk in _no_key_response(message, db):
+            yield chunk
         return
 
     client = anthropic.AsyncAnthropic(api_key=settings.anthropic_api_key)

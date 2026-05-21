@@ -382,24 +382,90 @@ def forums(
 def start(
     host: str = typer.Option("0.0.0.0", "--host", "-H"),
     port: int = typer.Option(8000, "--port", "-p"),
-    api_key: str = typer.Option("", "--api-key", "-k", help="Anthropic API key (or set ANTHROPIC_API_KEY env var)"),
+    api_key: str = typer.Option("", "--api-key", "-k", help="Anthropic API key"),
+    with_claude: bool = typer.Option(False, "--claude", "-c", help="Launch claude CLI with feedwatch MCP"),
 ):
-    """Start server + interactive REPL. Browser gets live updates via SSE."""
-    import os, asyncio
-    from feedwatch.cli.repl import run_start
+    """Start web server + optionally launch claude CLI with feedwatch MCP tools."""
+    import os, asyncio, subprocess, json, tempfile, threading, time
+    from pathlib import Path
 
-    # priorita: --api-key argument > env var > interaktivní prompt
     key = api_key or os.environ.get("ANTHROPIC_API_KEY", "")
-    if not key:
-        console.print("[dim]No API key — AI chat and summaries disabled.[/dim]")
-        console.print("[dim]Tip: feedwatch start --api-key sk-ant-...[/dim]")
-    else:
+    if key:
         os.environ["ANTHROPIC_API_KEY"] = key
         from feedwatch.config import settings
         settings.anthropic_api_key = key
-        console.print("[green]✓[/green] API key set — AI chat enabled")
+        console.print("[green]✓[/green] API key set")
 
-    asyncio.run(run_start(host, port))
+    project_dir = str(Path(__file__).parent.parent.parent)
+
+    if with_claude:
+        # 1. nastartuj web server na pozadí
+        from feedwatch.cli.repl import ServerThread
+        server = ServerThread(host, port)
+        server.start()
+
+        # počkej na start
+        import httpx
+        for _ in range(20):
+            try:
+                import urllib.request
+                urllib.request.urlopen(f"http://localhost:{port}/health", timeout=1)
+                break
+            except Exception:
+                time.sleep(0.5)
+
+        console.print(Panel(
+            f"[bold green]feedwatch server[/bold green] → http://{host}:{port}\n"
+            f"[dim]Web UI:[/dim] http://{host}:{port}\n"
+            f"[dim]Docs:[/dim]   http://{host}:{port}/docs\n\n"
+            f"[bold cyan]Spouštím claude s feedwatch MCP nástroji...[/bold cyan]\n"
+            f"[dim]Nástroje: fw_search, fw_recent, fw_ask, fw_feeds, fw_stats, fw_refresh, fw_top, fw_forums[/dim]",
+            border_style="cyan",
+        ))
+
+        # 2. MCP config jako env var pro claude
+        mcp_config = {
+            "feedwatch": {
+                "command": "uv",
+                "args": ["run", "feedwatch-mcp"],
+                "cwd": project_dir,
+            }
+        }
+
+        env = os.environ.copy()
+        env["MCP_SERVERS"] = json.dumps(mcp_config)
+
+        # 3. spusť claude CLI — přebere terminál
+        try:
+            subprocess.run(
+                ["claude", "--mcp-config", json.dumps({"mcpServers": mcp_config})],
+                env=env,
+                cwd=project_dir,
+            )
+        except FileNotFoundError:
+            # claude není v PATH — zkus jiné varianty
+            for cmd in [["npx", "@anthropic-ai/claude-code"], ["claude-code"]]:
+                try:
+                    subprocess.run(cmd + ["--mcp-config", json.dumps({"mcpServers": mcp_config})],
+                                   env=env, cwd=project_dir)
+                    break
+                except FileNotFoundError:
+                    continue
+            else:
+                console.print("[yellow]claude CLI nenalezeno.[/yellow]")
+                console.print(f"[dim]Spusť ručně v novém terminálu:[/dim]")
+                console.print(f"[cyan]FEEDWATCH_DIR={project_dir} claude[/cyan]")
+                console.print("\n[dim]Server stále běží. Ctrl+C pro ukončení.[/dim]")
+                try:
+                    while True:
+                        time.sleep(1)
+                except KeyboardInterrupt:
+                    pass
+
+        server.stop()
+    else:
+        # původní chování — jen REPL
+        asyncio.run(__import__('feedwatch.cli.repl', fromlist=['run_start']).run_start(host, port))
 
 
 @app.command()
