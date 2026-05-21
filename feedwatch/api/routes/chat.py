@@ -234,8 +234,130 @@ async def _no_key_response(message: str, db: AsyncSession):
     yield _sse("done", {})
 
 
+async def _build_context(message: str, db: AsyncSession) -> str:
+    """Předvyplní kontext z feedwatch DB a vloží ho do promptu."""
+    from datetime import datetime, UTC, timedelta
+    from sqlalchemy import select, func
+    from feedwatch.models.article import Article
+    from feedwatch.models.feed import Feed
+    from feedwatch.services.embedder import semantic_search
+
+    lines = ["=== FEEDWATCH DATABASE CONTEXT ===\n"]
+
+    # stats
+    total = (await db.execute(select(func.count(Article.id)))).scalar()
+    feeds_count = (await db.execute(select(func.count(Feed.id)))).scalar()
+    lines.append(f"Database: {total} articles from {feeds_count} feeds.\n")
+
+    # semantic search based on message
+    try:
+        results = semantic_search(message, n_results=6)
+        if results:
+            lines.append("\nMost relevant articles for this query:")
+            for r in results:
+                m = r["metadata"]
+                lines.append(f"- [{m['sentiment_label']}] {m['title']} | {m['url']}")
+    except Exception:
+        pass
+
+    # recent articles
+    since = datetime.now(UTC) - timedelta(hours=24)
+    result = await db.execute(
+        select(Article).where(Article.fetched_at >= since)
+        .order_by(Article.fetched_at.desc()).limit(8)
+    )
+    recent = result.scalars().all()
+    if recent:
+        lines.append("\nRecent articles (last 24h):")
+        for a in recent:
+            lines.append(f"- [{a.sentiment_label}] {a.title} | {a.url}")
+
+    lines.append("\n=== END CONTEXT ===\n")
+    return "\n".join(lines)
+
+
+async def _stream_via_claude_cli(message: str, history: list[dict], db: AsyncSession):
+    """Stream přes claude CLI subprocess — používá subscription, nepotřebuje API klíč."""
+    import asyncio
+    import json as _json
+    import shutil
+
+    claude_bin = shutil.which("claude")
+    if not claude_bin:
+        yield _sse("delta", {"text": "claude CLI not found in PATH."})
+        yield _sse("done", {})
+        return
+
+    # build context from DB
+    yield _sse("tool_start", {"name": "fetching_context", "id": "ctx"})
+    context = await _build_context(message, db)
+    yield _sse("tool_result", {"name": "fetching_context", "result": "done"})
+
+    # build full prompt
+    parts = [
+        "You are a news research assistant. Use the provided feedwatch database context to answer the question.\n",
+        context,
+    ]
+    for msg in history[-6:]:
+        role = "User" if msg["role"] == "user" else "Assistant"
+        parts.append(f"{role}: {msg['content']}")
+    parts.append(f"User: {message}")
+    parts.append("\nAnswer based on the context above. Cite article titles and URLs.")
+    full_prompt = "\n".join(parts)
+
+    proc = await asyncio.create_subprocess_exec(
+        claude_bin, "--print", "--output-format", "stream-json", "--verbose",
+        "--no-session-persistence",
+        stdin=asyncio.subprocess.PIPE,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.DEVNULL,
+    )
+
+    proc.stdin.write(full_prompt.encode())
+    await proc.stdin.drain()
+    proc.stdin.close()
+
+    buffer = b""
+    while True:
+        chunk = await proc.stdout.read(512)
+        if not chunk:
+            break
+        buffer += chunk
+        while b"\n" in buffer:
+            line, buffer = buffer.split(b"\n", 1)
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                obj = _json.loads(line)
+                if obj.get("type") == "assistant":
+                    for block in obj.get("message", {}).get("content", []):
+                        if block.get("type") == "text" and block.get("text"):
+                            yield _sse("delta", {"text": block["text"]})
+            except Exception:
+                pass
+
+    await proc.wait()
+    yield _sse("done", {})
+
+
 async def _stream_chat(message: str, history: list[dict], db: AsyncSession):
     if not settings.anthropic_api_key:
+        from feedwatch.services.claude_session import chat as claude_chat, has_claude
+
+        if has_claude():
+            # fetch DB context
+            yield _sse("tool_start", {"name": "fetching_context", "id": "ctx"})
+            context = await _build_context(message, db)
+            yield _sse("tool_result", {"name": "fetching_context", "result": "done"})
+
+            # stream via persistent claude session
+            async for text in claude_chat(message, context=context):
+                yield _sse("delta", {"text": text})
+            yield _sse("done", {})
+            return
+
+        # fallback: simple DB queries
         async for chunk in _no_key_response(message, db):
             yield chunk
         return
@@ -299,6 +421,14 @@ async def _stream_chat(message: str, history: list[dict], db: AsyncSession):
                 })
 
         messages.append({"role": "user", "content": tool_results})
+
+
+@router.post("/reset")
+async def chat_reset():
+    """Reset claude session — starts fresh conversation."""
+    from feedwatch.services.claude_session import reset_session
+    reset_session()
+    return {"status": "reset"}
 
 
 @router.post("/stream")
