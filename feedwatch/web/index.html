@@ -378,7 +378,7 @@ async function loadArticles() {
     if (state.search) {
       articles = await apiFetch(`/articles/search?q=${encodeURIComponent(state.search)}&limit=30`);
     } else {
-      let qs = `?limit=60&hours=${state.hours}`;
+      let qs = `?limit=60`;
       // filter by hours via fetched_at — handled server side as offset
       if (state.feedId) qs += `&feed_id=${state.feedId}`;
       if (state.sentiment !== 'all') qs += `&sentiment=${state.sentiment}`;

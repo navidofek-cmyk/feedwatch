@@ -13,7 +13,7 @@ router = APIRouter(prefix="/articles", tags=["articles"])
 async def list_articles(
     feed_id: int | None = Query(None),
     sentiment: str | None = Query(None, pattern="^(positive|negative|neutral)$"),
-    limit: int = Query(50, le=200),
+    limit: int = Query(50, le=5000),
     offset: int = Query(0, ge=0),
     db: AsyncSession = Depends(get_db),
 ):
