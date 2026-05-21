@@ -24,15 +24,11 @@ async def _run_claude(prompt: str, resume_id: str | None = None) -> AsyncGenerat
         "--print",
         "--output-format", "stream-json",
         "--verbose",
-        "--no-session-persistence" if not resume_id else f"--resume={resume_id}",
     ]
     if resume_id:
-        cmd = [
-            _claude_bin, "--print",
-            "--output-format", "stream-json",
-            "--verbose",
-            f"--resume={resume_id}",
-        ]
+        cmd += ["--resume", resume_id]   # dva oddělené argumenty
+    else:
+        cmd += ["--no-session-persistence"]
 
     proc = await asyncio.create_subprocess_exec(
         *cmd,
